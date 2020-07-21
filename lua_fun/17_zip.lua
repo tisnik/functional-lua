@@ -12,7 +12,7 @@
 require "fun"()
 
 
--- pomocná funkce pro tisk několika prvků nekonečné sekvence
+-- pomocná funkce pro tisk prvků konečné sekvence
 function printSequence(sequence)
     for _, value in iter(sequence) do
         print(value)

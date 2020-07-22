@@ -36,6 +36,7 @@ print()
 print("split(5, sequence)")
 print("----------------------")
 s1, s2 = split(5, g)
+print("done\n")
 printSequence(s1)
 
 
@@ -44,6 +45,7 @@ print()
 print("split(10, sequence)")
 print("----------------------")
 s1, s2 = split(10, g)
+print("done\n")
 printSequence(s1)
 
 
@@ -52,6 +54,7 @@ print()
 print("split(0, sequence)")
 print("----------------------")
 s1, s2 = split(0, g)
+print("done\n")
 printSequence(s1)
 
 

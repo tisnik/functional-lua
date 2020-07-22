@@ -44,8 +44,8 @@ g3 = zeros()
 -- vytvoření zipu ze tří sekvencí
 z1 = zip(g1, g2, g3)
 print()
-print("Zipped sequence (first ten items from infinite sequnce)")
-print("-------------------------------------------------------")
+print("Zipped sequence (first ten items from infinite sequence)")
+print("--------------------------------------------------------")
 printZippedSequence(z1, 10)
 
 

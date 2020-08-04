@@ -12,5 +12,30 @@
 M = require "moses"
 M.import()
 
+-- oddělení obsahu
+function printSeparator()
+    print("-------------------------------")
+end
+
+a = {}
+
+-- naplnění pole
+for i = 1, 9 do
+    a[tostring(i)] = i
+end
+
+printSeparator()
+
+-- tisk pole
+for key, value in pairs(a) do
+    print(key, value)
+end
+
+printSeparator()
+
+-- tisk pole setříděného podle klíčů
+for key, value in sortedk(a) do
+    print(key, value)
+end
 
 -- finito

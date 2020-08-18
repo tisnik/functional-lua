@@ -52,7 +52,7 @@ printSeparator()
 print("Original array #1")
 printArray(a)
 
-    -- vytištění druhého původního pole
+-- vytištění druhého původního pole
 printSeparator()
 print("Original array #2")
 printArray(b)

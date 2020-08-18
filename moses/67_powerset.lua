@@ -46,7 +46,7 @@ printSeparator()
 print("Powerset")
 p = powerset(a)
 
-for _, p in ipairs(powerset(a)) do
+for _, p in ipairs(p) do
     printArrayInLine(p)
 end
 

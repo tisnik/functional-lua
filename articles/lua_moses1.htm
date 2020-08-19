@@ -1,0 +1,2690 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Podpora funkcionálního programovaní v jazyku Lua s využitím knihovny Moses</title>
+<meta name="Author" content="Pavel Tisnovsky" />
+<meta name="Generator" content="vim" />
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<style type="text/css">
+         body {color:#000000; background:#ffffff;}
+         h1  {font-family: arial, helvetica, sans-serif; color:#ffffff; background-color:#c00000; text-align:center; padding-left:1em}
+         h2  {font-family: arial, helvetica, sans-serif; color:#ffffff; background-color:#0000c0; padding-left:1em; text-align:left}
+         h3  {font-family: arial, helvetica, sans-serif; color:#000000; background-color:#c0c0c0; padding-left:1em; text-align:left}
+         h4  {font-family: arial, helvetica, sans-serif; color:#000000; background-color:#e0e0e0; padding-left:1em; text-align:left}
+         a   {font-family: arial, helvetica, sans-serif;}
+         li  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         ol  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         ul  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         p   {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify;}
+         pre {background:#e0e0e0}
+</style>
+</head>
+
+<body>
+
+<h1>Podpora funkcionálního programovaní v jazyku Lua s využitím knihovny Moses</h1>
+
+<h3>Pavel Tišnovský</h3>
+
+<p></p>
+
+<h1>Úvodník</h1>
+
+<p>Druhou knihovnou určenou pro podporu funkcionálního programování v jazyku Lua je knihovna Moses. Ta se v některých ohledech odlišuje od již popsané knihovny Lua Fun a proto záleží na požadavcích konkrétního projektu, která knihovna se nakonec zvolí.</p>
+
+
+
+<h2>Obsah</h2>
+
+<p><a href="#k01">1. Podpora funkcionálního programovaní v&nbsp;jazyku Lua s&nbsp;využitím knihovny Moses</a></p>
+<p><a href="#k02">2. Instalace knihovny Moses a první testy</a></p>
+<p><a href="#k03">3. Import funkcí poskytovaných knihovnou Moses v&nbsp;rámci zvoleného kontextu</a></p>
+<p><a href="#k04">4. Funkce pro vytvoření sekvencí (konstruktory polí)</a></p>
+<p><a href="#k05">5. Konstruktor pole <strong>range</strong></a></p>
+<p><a href="#k06">6. Získání otočeného pole</a></p>
+<p><a href="#k07">7. Získání <i>n</i> prvních popř.&nbsp;<i>n</i> posledních prvků z&nbsp;pole</a></p>
+<p><a href="#k08">8. Získání části pole funkcemi <strong>initial</strong> a <strong>rest</strong></a></p>
+<p><a href="#k09">9. Pole využité jako množiny, množinové operace</a></p>
+<p><a href="#k10">10. Operace <strong>push</strong> a <strong>unshift</strong></a></p>
+<p><a href="#k11">11. Operace <strong>shift</strong></a></p>
+<p><a href="#k12">12. Operace <strong>pop</strong></a></p>
+<p><a href="#k13">13. Řez polem s&nbsp;využitím operace <strong>slice</strong></a></p>
+<p><a href="#k14">14. Získání unikátních prvků v&nbsp;poli</a></p>
+<p><a href="#k15">15. Výběr prvků ze začátku pole funkcí vyššího řádu <strong>selectWhile</strong></a></p>
+<p><a href="#k16">16. Přeskočení prvků ze začátku pole funkcí vyššího řádu <strong>dropWhile</strong></a></p>
+<p><a href="#k17">17. Výběr prvků z&nbsp;pole s&nbsp;využitím funkce vyššího řádu <strong>filter</strong></a></p>
+<p><a href="#k18">18. Repositář s&nbsp;demonstračními příklady</a></p>
+<p><a href="#k19">19. Články o programovacím jazyce Lua i o technologii LuaJITu</a></p>
+<p><a href="#k20">20. Odkazy na Internetu</a></p>
+
+
+
+<p><a name="k01"></a></p>
+<h2 id="k01">1. Podpora funkcionálního programovaní v&nbsp;jazyku Lua s&nbsp;využitím knihovny Moses</h2>
+
+<p>Na předchozí dva články [<a
+href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua/">1</a>]
+[<a
+href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua-dokonceni/">2</a>],
+v&nbsp;nichž jsme si ukazovali některé možnosti nabízené knihovnou <i>Lua
+Fun</i> v&nbsp;oblasti funkcionálního programování a zpracování konečných i
+nekonečných sekvencí, dnes navážeme. Popíšeme si totiž knihovnu nazvanou
+<i>Moses</i>, jejíž cíl je přibližně stejný &ndash; umožnit, aby se
+v&nbsp;programovacím jazyku <a
+href="https://www.root.cz/serialy/programovaci-jazyk-lua/">Lua</a> používaly
+programové konstrukce vycházející z&nbsp;funkcionálního programování:
+zpracování sekvencí (typicky bez modifikace původní sekvence), použití funkcí
+vyššího řádu apod. Zatímco knihovna <i>Lua Fun</i> byla navržena s&nbsp;ohledem
+na dosažení co nejlepšího výpočetního výkonu při jejím spuštění v&nbsp;LuaJITu,
+je zaměření knihovny <i>Moses</i> spíše obecnější, takže výpočty a operace
+v&nbsp;ní provedené mohou být pomalejší. Ostatně knihovna <i>Moses</i> je větší
+i co do objemu programového kódu, protože její čitelná verze má velikost
+přibližně 91 kB a minifikovaná verze 32 kB, zatímco čitelná verze knihovny
+<i>Lua Fun</i> má velikost 28 kB (bez minifikace).</p>
+
+<p>Navíc je již z&nbsp;prvního porovnání obou knihoven patrné, že <i>Lua
+Fun</i> je založena na iterátorech a generátorech konečných či nekonečných
+sekvencí, zatímco <i>Moses</i> lze chápat spíše jako sadu užitečných operací
+pro zpracování tabulek, polí (což bychom spíš měli překládat jako seznamy) a
+objektů. Navíc zde ovšem nalezneme i funkci <i>memoize</i>, jíž lze použít pro
+zapamatování předchozích výsledků volání nějaké funkce (která by pochopitelně
+měla být <i>referenčně transparentní</i>). Proto bude popis knihovny
+<i>Moses</i> organizován poněkud jiným způsobem, než tomu bylo u knihovny
+<i>Lua Fun</i>. V&nbsp;knihovně <i>Moses</i> musíme především rozlišovat
+operace určené pro práci s&nbsp;poli (<i>array</i>), které jsou odlišné od
+funkcí pro práci s&nbsp;tabulkami (<i>table</i>). Použitá terminologie ovšem
+může být matoucí, protože <i>array</i> zde znamená seznam (<i>list</i>) a pro
+některé operace množinu (<i>set</i>), kdežto tabulka znamená slovník
+(<i>dictionary</i>):</p>
+
+<table>
+<tr><th>#</th><th>Termín použitý v&nbsp;Moses</th><th>Běžný význam</th></tr>
+<tr><td>1</td><td>array</td><td>list, set</td></tr>
+<tr><td>2</td><td>table</td><td>dictionary</td></tr>
+</table>
+
+<p><div class="rs-tip-major">Poznámka: sice jsme si tedy řekli, že základní
+zaměření obou knihoven je přibližně stejné, ale implementovaná funkcionalita i
+sémantika se odlišuje. Záleží tedy na konkrétním projektu a preferencích
+samotného vývojáře, kterou knihovnu si pro svoji aplikaci zvolí. Pokud
+preferujete pohled na data formou konečných a nekonečných sekvencí (tedy
+&bdquo;styl Clojure&ldquo;), je ideální použít <i>Lua Fun</i>, pokud naopak
+plánujete práci s&nbsp;klasickými tabulkami jazyka Lua, je výhodnější použít
+knihovnu <i>Moses</i>.</div></p>
+
+
+
+<p><a name="k02"></a></p>
+<h2 id="k02">2. Instalace knihovny Moses a první testy</h2>
+
+<p>Většinu &bdquo;funkcionálních&ldquo; pojmů, s&nbsp;nimiž se v&nbsp;dnešním
+článku setkáme, jsme si již popsali <a
+href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua/">v&nbsp;úvodním
+článku</a>, takže se dnes již můžeme zaměřit na ukázání způsobů použití této
+knihovny. Nejdříve ji pochopitelně musíme získat, což je ve skutečnosti velmi
+snadné. Postačuje použít Git pro naklonování repositáře projektu:</p>
+
+<pre>
+$ <strong>git clone git://github.com/Yonaba/Moses.git</strong>
+&nbsp;
+Cloning into 'Moses'...
+remote: Enumerating objects: 2017, done.
+remote: Total 2017 (delta 0), reused 0 (delta 0), pack-reused 2017
+Receiving objects: 100% (2017/2017), 1.41 MiB | 1.79 MiB/s, done.
+Resolving deltas: 100% (1180/1180), done.
+</pre>
+
+<p>V&nbsp;naklonovaném repositáři se nachází zdrojové soubory této knihovny
+uložené v&nbsp;souboru se jménem <strong>moses.lua</strong>
+popř.&nbsp;minifikovaná varianta pojmenovaná <strong>moses_min.lua</strong>.
+Jeden z&nbsp;těchto souborů postačuje přidat buď přímo ke zdrojovým kódům
+aplikace nebo do adresáře, na který ukazuje proměnná prostředí
+<strong>LUAPATH</strong>.</p>
+
+<p><div class="rs-tip-major">Poznámka: knihovna Moses je, podobně jako samotná
+Lua, vydaná pod <a href="https://en.wikipedia.org/wiki/MIT_License">MIT
+licencí</a>, takže je zařazení zdrojových textů knihovny Moses do aplikací
+většinou možné.</div></p>
+
+<p>Pochopitelně je možné pro instalaci použít i správce balíčků
+<i>LuaRocks</i>.</p>
+
+<p>Po instalaci je možné otestovat, zda je možné knihovnu Moses načíst do
+skriptu a použít funkce, které jsou v&nbsp;ní definovány:</p>
+
+<pre>
+<i>-- načtení knihovny Moses</i>
+local M = require "moses"
+&nbsp;
+&nbsp;
+<i>-- pokus o použití funkce z knihovny Moses</i>
+table = M.range(10, 1)
+for index, value in ipairs(table) <strong>do</strong>
+    print(index, value)
+<strong>end</strong>
+</pre>
+
+<p>Výsledný skript by měl být spustitelný (resp.&nbsp;přesněji řečeno
+interpretovatelný):</p>
+
+<pre>
+$ <strong>lua 01_install_test.lua</strong>
+&nbsp;
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+</pre>
+
+
+
+<p><a name="k03"></a></p>
+<h2 id="k03">3. Import funkcí poskytovaných knihovnou Moses v&nbsp;rámci zvoleného kontextu</h2>
+
+<p>Existuje i druhá varianta importů funkcí, které jsou poskytované knihovnou
+Moses. Tato varianta je založena na tom, že se všechny funkce uloží buď do
+globálního jmenného prostoru (což je pro menší projekty užitečná vlastnost)
+nebo do zvoleného kontextu. Nejdříve si ukažme import funkcí do globálního
+jmenného prostoru. Pro tento účel se použije funkce <strong>import</strong>,
+které se nepředají žádné parametry:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- pokus o použití funkce z knihovny Moses</i>
+table = range(10, 1)
+for index, value in ipairs(table) <strong>do</strong>
+    print(index, value)
+<strong>end</strong>
+</pre>
+
+<p>I tento skript by měl být interpretrem bez problémů spustitelný:</p>
+
+<pre>
+$ <strong>lua 02_import_everything.lua</strong>
+&nbsp;
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+</pre>
+
+<p>Alternativně lze využít import funkcí do takzvaného <i>kontextu</i>, což
+může být libovolná (i prázdná) tabulka. K&nbsp;importovaným funkcím se bude
+přistupovat přes tečkovou notaci popř.&nbsp;výběrem přes klíč (což ovšem
+málokdo bude zapisovat). V&nbsp;dalším příkladu jsou vytvořeny a využity dva
+kontextu:</p>
+
+<pre>
+<i>-- vytvoření dvou kontextů</i>
+context1 = {}
+context2 = {}
+&nbsp;
+<i>-- načtení knihovny Moses</i>
+M = require "moses"
+&nbsp;
+<i>-- import funkcí do kontextů</i>
+M.import(context1)
+M.import(context2)
+&nbsp;
+&nbsp;
+<i>-- pokus o použití funkce z knihovny Moses</i>
+print("M")
+table = M.range(10, 1)
+for index, value in ipairs(table) <strong>do</strong>
+    print(index, value)
+<strong>end</strong>
+&nbsp;
+print()
+&nbsp;
+<i>-- nyní vyzkoušíme stejnou funkci, ovšem v prvním kontextu</i>
+print("context 1")
+table = context1.range(10, 1)
+for index, value in ipairs(table) <strong>do</strong>
+    print(index, value)
+<strong>end</strong>
+&nbsp;
+print()
+&nbsp;
+<i>-- nyní vyzkoušíme stejnou funkci, ovšem ve druhém kontextu</i>
+print("context 2")
+table = context2.range(10, 1)
+for index, value in ipairs(table) <strong>do</strong>
+    print(index, value)
+<strong>end</strong>
+</pre>
+
+<p>Výsledek po spuštění příkladu:</p>
+
+<pre>
+$ <strong>lua 03_import_into_context.lua</strong>
+&nbsp;
+M
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+&nbsp;
+context 1
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+&nbsp;
+context 2
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+</pre>
+
+
+
+<p><a name="k04"></a></p>
+<h2 id="k04">4. Funkce pro vytvoření sekvencí (konstruktory polí)</h2>
+
+<p>Podobně jako se v&nbsp;knihovně <i>Lua Fun</i> nacházelo několik funkcí
+určených pro konstrukci konečných i nekonečných sekvencí, nalezneme
+v&nbsp;knihovně <i>Moses</i> funkce pro konstrukci (konečných) polí &ndash;
+většina těchto funkcí tedy potřebuje znát i informaci o délce nově
+konstruovaného pole. Jedná se o následující konstruktory:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Význam</th></tr>
+<tr><td>1</td><td>zeros()</td><td>pole obsahující nulové prvky</td></tr>
+<tr><td>2</td><td>ones()</td><td>pole obsahující prvky s&nbsp;hodnotou 1</td></tr>
+<tr><td>3</td><td>rep()</td><td>pole obsahující prvky se shodnou hodnotou předanou do konstruktoru</td></tr>
+<tr><td>4</td><td>vector()</td><td>implementuje stejnou funkcionalitu, jako konstruktor <strong>rep</strong></td></tr>
+<tr><td>5</td><td>range()</td><td>pole s&nbsp;aritmetickou posloupností zadané délky</td></tr>
+</table>
+
+<p>První konstruktor se jmenuje <strong>zeros()</strong> a slouží pro vytvoření
+pole obsahujícího samé nuly (tedy N nulových prvků). Použití tohoto
+konstruktoru je snadné:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+<i>-- pole s nulami</i>
+a1 = zeros(10)
+printSeparator()
+print("zeros(10)")
+printArray(a1)
+&nbsp;
+<i>-- pole s jedním prvkem</i>
+a2 = zeros(1)
+printSeparator()
+print("zeros(1)")
+printArray(a2)
+&nbsp;
+<i>-- prázdné pole s nulami</i>
+a3 = zeros(0)
+printSeparator()
+print("zeros(0)")
+printArray(a3)
+&nbsp;
+<i>-- pole s nulami</i>
+a4 = zeros(-1)
+printSeparator()
+print("zeros(-1)")
+printArray(a4)
+</pre>
+
+<p>Výsledky zobrazené po spuštění tohoto demonstračního příkladu:</p>
+
+<pre>
+-------------------------------
+zeros(10)
+1       0
+2       0
+3       0
+4       0
+5       0
+6       0
+7       0
+8       0
+9       0
+10      0
+-------------------------------
+zeros(1)
+1       0
+-------------------------------
+zeros(0)
+-------------------------------
+zeros(-1)
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;posledních dvou případech se
+zkonstruovalo prázdné pole.</div></p>
+
+<p>Druhý konstruktor se jmenuje <strong>ones</strong> a slouží pro konstrukci
+pole obsahujícího pouze prvky s&nbsp;hodnotou 1:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+<i>-- pole s jedničkami</i>
+a1 = ones(10)
+printSeparator()
+print("ones(10)")
+printArray(a1)
+&nbsp;
+<i>-- pole s jedním prvkem</i>
+a2 = ones(1)
+printSeparator()
+print("ones(1)")
+printArray(a2)
+&nbsp;
+<i>-- prázdné pole s jedničkami</i>
+a3 = ones(0)
+printSeparator()
+print("ones(0)")
+printArray(a3)
+&nbsp;
+<i>-- pole s jedničkami</i>
+a4 = ones(-1)
+printSeparator()
+print("ones(-1)")
+printArray(a4)
+</pre>
+
+<p>Opět si ukažme zprávy zobrazené po spuštění tohoto demonstračního
+příkladu:</p>
+
+<pre>
+-------------------------------
+ones(10)
+1       1
+2       1
+3       1
+4       1
+5       1
+6       1
+7       1
+8       1
+9       1
+10      1
+-------------------------------
+ones(1)
+1       1
+-------------------------------
+ones(0)
+-------------------------------
+ones(-1)
+</pre>
+
+<p>Třetí konstruktor se jmenuje <strong>rep</strong> a slouží pro vytvoření
+pole se stejnými prvky. Tentokrát jsou ovšem prvky specifikované programátorem
+při volání konstruktoru. Ostatní chování je shodné s&nbsp;konstruktory
+<strong>zeros</strong> a <strong>ones</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+<i>-- pole s opakující se hodnotou</i>
+a1 = rep("*", 10)
+printSeparator()
+print("rep('*', 10)")
+printArray(a1)
+&nbsp;
+<i>-- pole s jedinou hodnotou</i>
+a2 = rep("*", 1)
+printSeparator()
+print("rep('*', 1)")
+printArray(a2)
+&nbsp;
+<i>-- prázdné pole s opakující se hodnotou</i>
+a3 = rep("*", 0)
+printSeparator()
+print("rep('*', 0)")
+printArray(a3)
+&nbsp;
+<i>-- pole s opakující se hodnotou</i>
+a4 = rep("*", -1)
+printSeparator()
+print("rep('*', -1)")
+printArray(a5)
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;tomto příkladu naznačujeme, že
+prvky polí nemusí být pouze numerické hodnoty. Použít lze hodnotu libovolného
+typu, a to včetně speciální hodnoty <strong>nil</strong>.</div></p>
+
+<p>Výsledky:</p>
+
+<pre>
+-------------------------------
+rep('*', 10)
+1       *
+2       *
+3       *
+4       *
+5       *
+6       *
+7       *
+8       *
+9       *
+10      *
+-------------------------------
+rep('*', 1)
+1       *
+-------------------------------
+rep('*', 0)
+-------------------------------
+rep('*', -1)
+</pre>
+
+<p>Pole se stejnými vlastnostmi lze zkonstruovat i s&nbsp;využitím funkce
+<strong>vector</strong>, což opět vnáší určitý zmatek do použité terminologie
+(<i>vektor</i> má v&nbsp;jiných jazycích a knihovnách dosti odlišný význam).
+Z&nbsp;tohoto důvodu bude asi lepší použít výše zmíněný konstruktor
+<strong>rep</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+<i>-- pole s opakující se hodnotou</i>
+a1 = vector("*", 10)
+printSeparator()
+print("vector('*', 10)")
+printArray(a1)
+&nbsp;
+<i>-- pole s jedinou hodnotou</i>
+a2 = vector("*", 1)
+printSeparator()
+print("vector('*', 1)")
+printArray(a2)
+&nbsp;
+<i>-- prázdné pole s opakující se hodnotou</i>
+a3 = vector("*", 0)
+printSeparator()
+print("vector('*', 0)")
+printArray(a3)
+&nbsp;
+<i>-- pole s opakující se hodnotou</i>
+a4 = vector("*", -1)
+printSeparator()
+print("vector('*', -1)")
+printArray(a5)
+</pre>
+
+<p>Výsledky po spuštění:</p>
+
+<pre>
+-------------------------------
+vector('*', 10)
+1       *
+2       *
+3       *
+4       *
+5       *
+6       *
+7       *
+8       *
+9       *
+10      *
+-------------------------------
+vector('*', 1)
+1       *
+-------------------------------
+vector('*', 0)
+-------------------------------
+vector('*', -1)
+</pre>
+
+
+
+<p><a name="k05"></a></p>
+<h2 id="k05">5. Konstruktor pole <strong>range</strong></h2>
+
+<p>I v&nbsp;knihovně <i>Moses</i> pochopitelně nalezneme konstruktor
+<strong>range</strong>, který se ovšem některými svými vlastnostmi odlišuje od
+generátoru <strong>range</strong> z&nbsp;Pythonu či z&nbsp;knihovny <i>Lua
+Fun</i>. Konstruktor <strong>range</strong> akceptuje buď pouze zadání konečné
+hodnoty (potom se počítá od jedničky, jak je v&nbsp;jazyce Lua zvykem); lze
+ovšem zadat i počáteční hodnotu a navíc i krok. V&nbsp;případě, že je počáteční
+hodnota větší než hodnota koncová, bude krok automaticky nastaven na hodnotu
+-1, pochopitelně pokud není uveden explicitně. Navíc mohou být obě meze i krok
+specifikovány neceločíselnou hodnotou. Opět se podívejme na několik příkladů
+použití tohoto velmi užitečného konstruktoru:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- prázdné pole při neuvedení rozsahu</i>
+a0 = range()
+printSeparator()
+print("range()")
+printArray(a0)
+&nbsp;
+&nbsp;
+<i>-- první pole začínající standardně od jedničky</i>
+a1 = range(10)
+printSeparator()
+print("range(10)")
+printArray(a1)
+&nbsp;
+&nbsp;
+<i>-- druhé pole s explicitní specifikací hodnoty prvního prvku</i>
+a2 = range(1, 10)
+printSeparator()
+print("range(1, 10)")
+printArray(a2)
+&nbsp;
+&nbsp;
+<i>-- třetí pole se specifikací kroku (rozdílu mezi dvěma prvky)</i>
+a3 = range(1, 10, 2)
+printSeparator()
+print("range(1, 10, 2)")
+printArray(a3)
+&nbsp;
+&nbsp;
+<i>-- čtvrté pole s prvky počítanými pozpátku</i>
+a4 = range(10, 1)
+printSeparator()
+print("range(10, 1)")
+printArray(a4)
+&nbsp;
+&nbsp;
+<i>-- páté pole počítané pozpátku s kladným krokem</i>
+a5 = range(10, 1, 2)
+printSeparator()
+print("range(10, 1, 2)")
+printArray(a5)
+&nbsp;
+&nbsp;
+<i>-- šesté pole počítané pozpátku se záporným krokem</i>
+a6 = range(10, 1, -2)
+printSeparator()
+print("range(10, 1, -2)")
+printArray(a6)
+&nbsp;
+&nbsp;
+<i>-- sedmé pole s neceločíselným krokem</i>
+a7 = range(1, 5, 0.5)
+printSeparator()
+print("range(10, 5, 0.5)")
+printArray(a7)
+&nbsp;
+&nbsp;
+<i>-- osmé pole s neceločíselným krokem a počáteční hodnotou typu double</i>
+a8 = range(1.0, 5, 0.5)
+printSeparator()
+print("range(10, 5, 0.5)")
+printArray(a8)
+&nbsp;
+&nbsp;
+<i>-- deváté pole testující vliv problematické hodnoty 0.1</i>
+a9 = range(0, 1, 0.1)
+printSeparator()
+print("range(0, 1, 0.1)")
+printArray(a9)
+&nbsp;
+&nbsp;
+<i>-- desáté pole s počáteční hodnotou typu double</i>
+a10 = range(0.0, 1, 0.1)
+printSeparator()
+print("range(0.0, 1, 0.1)")
+printArray(a9)
+</pre>
+
+<p>S&nbsp;výsledky:</p>
+
+<pre>
+-------------------------------
+range()
+-------------------------------
+range(10)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+-------------------------------
+range(1, 10)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+-------------------------------
+range(1, 10, 2)
+1       1
+2       3
+3       5
+4       7
+5       9
+-------------------------------
+range(10, 1)
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+-------------------------------
+range(10, 1, 2)
+1       10
+-------------------------------
+range(10, 1, -2)
+1       10
+2       8
+3       6
+4       4
+5       2
+-------------------------------
+range(10, 5, 0.5)
+1       1
+2       1.5
+3       2.0
+4       2.5
+5       3.0
+6       3.5
+7       4.0
+8       4.5
+9       5.0
+-------------------------------
+range(10, 5, 0.5)
+1       1.0
+2       1.5
+3       2.0
+4       2.5
+5       3.0
+6       3.5
+7       4.0
+8       4.5
+9       5.0
+-------------------------------
+range(0, 1, 0.1)
+1       0
+2       0.1
+3       0.2
+4       0.3
+5       0.4
+6       0.5
+7       0.6
+8       0.7
+9       0.8
+10      0.9
+11      1.0
+-------------------------------
+range(0.0, 1, 0.1)
+1       0
+2       0.1
+3       0.2
+4       0.3
+5       0.4
+6       0.5
+7       0.6
+8       0.7
+9       0.8
+10      0.9
+11      1.0
+</pre>
+
+
+
+<p><a name="k06"></a></p>
+<h2 id="k06">6. Získání otočeného pole</h2>
+
+<p>Tato kapitola bude velmi stručná, protože se v&nbsp;ní zmíníme o jediné
+funkci nazvané <strong>reverse</strong>. Tato funkce, jak již její název
+naznačuje, slouží pro získání nového pole, které obsahuje stejné prvky jako
+pole původní, ovšem uložené v&nbsp;opačném pořadí.</p>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;knihovně <i>Lua Fun</i>
+orientované na sekvence (a to i sekvence nekonečné) tuto funkci nenajdeme a
+vlastně v&nbsp;ní nenajdeme žádnou funkci, která by s&nbsp;prvky sekvencí
+pracovala jinak než v&nbsp;přirozeném pořadí.</div></p>
+
+<p>Podívejme se na příklad použití funkce <strong>reverse</strong>, a to na
+zdrojovém kódu, který vznikl nepatrnou úpravou předchozího demonstračního
+příkladu:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- prázdné pole při neuvedení rozsahu</i>
+a0 = reverse(range())
+printSeparator()
+print("reverse(range())")
+printArray(a0)
+&nbsp;
+&nbsp;
+<i>-- první pole začínající standardně od jedničky</i>
+a1 = reverse(range(10))
+printSeparator()
+print("reverse(range(10))")
+printArray(a1)
+&nbsp;
+&nbsp;
+<i>-- druhé pole s explicitní specifikací hodnoty prvního prvku</i>
+a2 = reverse(range(1, 10))
+printSeparator()
+print("reverse(range(1, 10))")
+printArray(a2)
+&nbsp;
+&nbsp;
+<i>-- třetí pole se specifikací kroku (rozdílu mezi dvěma prvky)</i>
+a3 = reverse(range(1, 10, 2))
+printSeparator()
+print("reverse(range(1, 10, 2))")
+printArray(a3)
+&nbsp;
+&nbsp;
+<i>-- čtvrté pole s prvky počítanými pozpátku</i>
+a4 = reverse(range(10, 1))
+printSeparator()
+print("reverse(range(10, 1))")
+printArray(a4)
+&nbsp;
+&nbsp;
+<i>-- páté pole počítané pozpátku s kladným krokem</i>
+a5 = reverse(range(10, 1, 2))
+printSeparator()
+print("reverse(range(10, 1, 2))")
+printArray(a5)
+&nbsp;
+&nbsp;
+<i>-- šesté pole počítané pozpátku se záporným krokem</i>
+a6 = reverse(range(10, 1, -2))
+printSeparator()
+print("reverse(range(10, 1, -2))")
+printArray(a6)
+&nbsp;
+&nbsp;
+<i>-- sedmé pole s neceločíselným krokem</i>
+a7 = reverse(range(1, 5, 0.5))
+printSeparator()
+print("reverse(range(10, 5, 0.5))")
+printArray(a7)
+&nbsp;
+&nbsp;
+<i>-- osmé pole s neceločíselným krokem a počáteční hodnotou typu double</i>
+a8 = reverse(range(1.0, 5, 0.5))
+printSeparator()
+print("reverse(range(10, 5, 0.5))")
+printArray(a8)
+&nbsp;
+&nbsp;
+<i>-- deváté pole testující vliv problematické hodnoty 0.1</i>
+a9 = reverse(range(0, 1, 0.1))
+printSeparator()
+print("reverse(range(0, 1, 0.1))")
+printArray(a9)
+&nbsp;
+&nbsp;
+<i>-- desáté pole s počáteční hodnotou typu double</i>
+a10 = reverse(range(0.0, 1, 0.1))
+printSeparator()
+print("reverse(range(0.0, 1, 0.1))")
+printArray(a9)
+</pre>
+
+<p>Zprávy získané po spuštění tohoto příkladu:</p>
+
+<pre>
+-------------------------------
+reverse(range())
+-------------------------------
+reverse(range(10))
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+-------------------------------
+reverse(range(1, 10))
+1       10
+2       9
+3       8
+4       7
+5       6
+6       5
+7       4
+8       3
+9       2
+10      1
+-------------------------------
+reverse(range(1, 10, 2))
+1       9
+2       7
+3       5
+4       3
+5       1
+-------------------------------
+reverse(range(10, 1))
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+-------------------------------
+reverse(range(10, 1, 2))
+1       10
+-------------------------------
+reverse(range(10, 1, -2))
+1       2
+2       4
+3       6
+4       8
+5       10
+-------------------------------
+reverse(range(10, 5, 0.5))
+1       5.0
+2       4.5
+3       4.0
+4       3.5
+5       3.0
+6       2.5
+7       2.0
+8       1.5
+9       1
+-------------------------------
+reverse(range(10, 5, 0.5))
+1       5.0
+2       4.5
+3       4.0
+4       3.5
+5       3.0
+6       2.5
+7       2.0
+8       1.5
+9       1.0
+-------------------------------
+reverse(range(0, 1, 0.1))
+1       1.0
+2       0.9
+3       0.8
+4       0.7
+5       0.6
+6       0.5
+7       0.4
+8       0.3
+9       0.2
+10      0.1
+11      0
+-------------------------------
+reverse(range(0.0, 1, 0.1))
+1       1.0
+2       0.9
+3       0.8
+4       0.7
+5       0.6
+6       0.5
+7       0.4
+8       0.3
+9       0.2
+10      0.1
+11      0
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, že je možné otočit i
+prázdné pole, takže není nutné v&nbsp;programem tuto možnost explicitně
+ošetřovat.</div></p>
+
+
+
+<p><a name="k07"></a></p>
+<h2 id="k07">7. Získání <i>n</i> prvních popř.&nbsp;<i>n</i> posledních prvků z&nbsp;pole</h2>
+
+<p>Při zpracování seznamů či sekvencí se často používají funkce nazvané
+<strong>first</strong> a <strong>rest</strong>. U polí je situace jednodušší,
+neboť je možné přistupovat k&nbsp;prvkům náhodně, je známá délka pole atd.
+Proto knihovna <i>Moses</i> nabízí následující funkce, které dokážou
+z&nbsp;pole získat prvky ze začátku nebo naopak z&nbsp;konce pole:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>first</td><td>získání prvních N prvků z&nbsp;pole</td></tr>
+<tr><td>2</td><td>last</td><td>získání posledních N prvků z&nbsp;pole</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>3</td><td>initial</td><td>získání prvků z&nbsp;pole kromě posledních N prvků</td></tr>
+<tr><td>4</td><td>rest</td><td>získání všech prvků z&nbsp;pole za indexem N</td></tr>
+</table>
+
+<p><div class="rs-tip-major">Poznámka: jméno poslední funkce je opět matoucí,
+zejména pro ty vývojáře, kteří používají i jiné programovací jazyky
+popř.&nbsp;knihovny.</div></p>
+
+<p>Podívejme se nejprve na chování funkce <strong>first</strong>, která získá
+buď první prvek z&nbsp;pole (pokud N není zadáno) nebo prvních N prvků. Druhá
+část příkladu ukazuje použití funkce <strong>last</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vstupní pole</i>
+s = range(12)
+printSeparator()
+print("original array")
+printArray(s)
+&nbsp;
+&nbsp;
+<i>-- funkce first</i>
+printSeparator()
+print("first(s)")
+printArray(first(s))
+&nbsp;
+&nbsp;
+<i>-- funkce first s udáním počtu prvků</i>
+printSeparator()
+print("first(s, 5)")
+printArray(first(s, 5))
+&nbsp;
+&nbsp;
+<i>-- funkce first s udáním nulového počtu prvků</i>
+printSeparator()
+print("first(s, 0)")
+printArray(first(s, 0))
+&nbsp;
+&nbsp;
+<i>-- funkce last</i>
+printSeparator()
+print("last(s)")
+printArray(last(s))
+&nbsp;
+&nbsp;
+<i>-- funkce last s udáním počtu prvků</i>
+printSeparator()
+print("last(s, 5)")
+printArray(last(s, 5))
+&nbsp;
+&nbsp;
+<i>-- funkce last s udáním nulového počtu prvků</i>
+printSeparator()
+print("last(s, 0)")
+printArray(last(s, 0))
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+-------------------------------
+original array
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+12      12
+-------------------------------
+first(s)
+1       1
+-------------------------------
+first(s, 5)
+1       1
+2       2
+3       3
+4       4
+5       5
+-------------------------------
+first(s, 0)
+-------------------------------
+last(s)
+1       2
+2       3
+3       4
+4       5
+5       6
+6       7
+7       8
+8       9
+9       10
+10      11
+11      12
+-------------------------------
+last(s, 5)
+1       8
+2       9
+3       10
+4       11
+5       12
+-------------------------------
+last(s, 0)
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, že lze vrátit i prázdné
+pole.</div></p>
+
+
+
+<p><a name="k08"></a></p>
+<h2 id="k08">8. Získání části pole funkcemi <strong>initial</strong> a <strong>rest</strong></h2>
+
+<p>Další dvě funkce zmíněné již v&nbsp;rámci <a href="#k07">předchozí
+kapitoly</a> umožňují, aby se při přístupu k&nbsp;části pole nemusely používat
+(relativně složité) výpočty zahrnující délku pole (s&nbsp;běžnými problémy typu
+&pm;1). Operace prováděné těmito funkcemi jsou založeny na
+<strong>first</strong> a <strong>last</strong>, ovšem neuvádí se počet prvků,
+které se mají přečíst, ale relativní index od druhého konce pole. Opět si
+ukažme, jak se tyto operace používají:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArray(array)
+    <strong>for</strong> index, value in ipairs(array) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vstupní pole</i>
+s = range(12)
+printSeparator()
+print("original array")
+printArray(s)
+&nbsp;
+&nbsp;
+<i>-- funkce initial</i>
+printSeparator()
+print("initial(s)")
+printArray(initial(s))
+&nbsp;
+&nbsp;
+<i>-- funkce initial s udáním počtu prvků</i>
+printSeparator()
+print("initial(s, 5)")
+printArray(initial(s, 5))
+&nbsp;
+&nbsp;
+<i>-- funkce initial s udáním nulového počtu prvků</i>
+printSeparator()
+print("initial(s, 0)")
+printArray(initial(s, 0))
+&nbsp;
+&nbsp;
+<i>-- funkce rest</i>
+printSeparator()
+print("rest(s)")
+printArray(rest(s))
+&nbsp;
+&nbsp;
+<i>-- funkce rest s udáním počtu prvků</i>
+printSeparator()
+print("rest(s, 5)")
+printArray(rest(s, 5))
+&nbsp;
+&nbsp;
+<i>-- funkce rest s udáním nulového počtu prvků</i>
+printSeparator()
+print("rest(s, 0)")
+printArray(rest(s, 0))
+</pre>
+
+<p>Ze zobrazených výsledků je patrné rozdílné chování oproti funkcím
+<strong>first</strong> a <strong>last</strong>:</p>
+
+<pre>
+-------------------------------
+original array
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+12      12
+-------------------------------
+initial(s)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+-------------------------------
+initial(s, 5)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+-------------------------------
+initial(s, 0)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+12      12
+-------------------------------
+rest(s)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+12      12
+-------------------------------
+rest(s, 5)
+1       5
+2       6
+3       7
+4       8
+5       9
+6       10
+7       11
+8       12
+-------------------------------
+rest(s, 0)
+1       1
+2       2
+3       3
+4       4
+5       5
+6       6
+7       7
+8       8
+9       9
+10      10
+11      11
+12      12
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, že
+<strong>initial</strong> i <strong>rest</strong> zavolané s&nbsp;nulovým
+offsetem vrátí původní pole.</div></p>
+
+
+
+<p><a name="k09"></a></p>
+<h2 id="k09">9. Pole využité jako množiny, množinové operace</h2>
+
+<p>Pole, speciálně pole s&nbsp;unikátními prvky, je možné využít i ve funkci
+množiny (množiny totiž nejsou v&nbsp;programovacím jazyce Lua základním datovým
+typem, na rozdíl od například Pythonu). Pro práci s&nbsp;množinami nabízí
+knihovna <i>Moses</i> několik funkcí:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Význam</th></tr>
+<tr><td>1</td><td>union</td><td>sjednocení dvou či více množin</td></tr>
+<tr><td>2</td><td>intersection</td><td>průnik dvou či více množin</td></tr>
+<tr><td>3</td><td>difference</td><td>rozdíl množin</td></tr>
+<tr><td>4</td><td>symmetricDifference</td><td>symetrická diference (negace průniku)</td></tr>
+</table>
+
+<p>Následuje ukázka použití všech čtyř zmíněných množinových operací:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a1 = {1, 2, 3, 4}
+a2 = {3, 4, 5, 6}
+&nbsp;
+printSeparator()
+print("a1")
+printArrayInLine(a1)
+&nbsp;
+printSeparator()
+print("a2")
+printArrayInLine(a2)
+&nbsp;
+printSeparator()
+print("union(a1, a2)")
+printArrayInLine(union(a1, a2))
+&nbsp;
+printSeparator()
+print("intersection(a1, a2)")
+printArrayInLine(intersection(a1, a2))
+&nbsp;
+printSeparator()
+print("difference(a1, a2)")
+printArrayInLine(difference(a1, a2))
+&nbsp;
+printSeparator()
+print("difference(a2, a1)")
+printArrayInLine(difference(a2, a1))
+&nbsp;
+printSeparator()
+print("symmetricDifference(a1, a2)")
+printArrayInLine(symmetricDifference(a1, a2))
+&nbsp;
+printSeparator()
+print("symmetricDifference(a2, a1)")
+printArrayInLine(symmetricDifference(a2, a1))
+</pre>
+
+<p>Na výsledcích je vliv všech čtyř operací dobře patrný:</p>
+
+<pre>
+-------------------------------
+a1
+1, 2, 3, 4
+-------------------------------
+a2
+3, 4, 5, 6
+-------------------------------
+union(a1, a2)
+1, 2, 3, 4, 5, 6
+-------------------------------
+intersection(a1, a2)
+3, 4
+-------------------------------
+difference(a1, a2)
+1, 2
+-------------------------------
+difference(a2, a1)
+5, 6
+-------------------------------
+symmetricDifference(a1, a2)
+1, 2, 5, 6
+-------------------------------
+symmetricDifference(a2, a1)
+5, 6, 1, 2
+</pre>
+
+
+
+<p><a name="k10"></a></p>
+<h2 id="k10">10. Operace <strong>push</strong> a <strong>unshift</strong></h2>
+
+<p>Další dvě funkce, které si dnes ve stručnosti popíšeme, se jmenují
+<strong>push</strong> a <strong>unshift</strong>. První funkce dokáže <i>za</i>
+konec pole připojit novou hodnotu. Dojde přitom k&nbsp;modifikaci původního
+pole &ndash; nejedná se tedy o operaci, kterou bychom v&nbsp;čistě funkcionální
+knihovně očekávali. Opakem funkce <strong>push</strong> je funkce nazvaná
+<strong>unshift</strong>, která naopak z&nbsp;pole poslední prvek odstraní a
+vrátí ho jako svoji návratovou hodnotu:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = {}
+printSeparator()
+print("original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('a')")
+push(a, "a")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('b')")
+push(a, "b")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('c')")
+push(a, "c")
+printArrayInLine(a)
+&nbsp;
+for i = 1, 5 <strong>do</strong>
+    printSeparator()
+    item = unshift(a)
+    print("unshifted item:", item)
+    print("after unshift()")
+    printArrayInLine(a)
+<strong>end</strong>
+</pre>
+
+<p>Po spuštění tohoto příkladu je patrné, že skutečně dochází k&nbsp;modifikaci
+původního pole:</p>
+
+<pre>
+-------------------------------
+original array
+&nbsp;
+-------------------------------
+after push('a')
+a
+-------------------------------
+after push('b')
+a, b
+-------------------------------
+after push('c')
+a, b, c
+-------------------------------
+unshifted item: c
+after unshift()
+a, b
+-------------------------------
+unshifted item: b
+after unshift()
+a
+-------------------------------
+unshifted item: a
+after unshift()
+&nbsp;
+-------------------------------
+unshifted item: nil
+after unshift()
+&nbsp;
+-------------------------------
+unshifted item: nil
+after unshift()
+&nbsp;
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;posledních třech krocích je vždy
+vráceno prázdné pole.</div></p>
+
+
+
+<p><a name="k11"></a></p>
+<h2 id="k11">11. Operace <strong>shift</strong></h2>
+
+<p>Zatímco funkce <strong>unshift</strong> odstraňuje a vrací <i>poslední</i>
+prvek pole, provádí funkce <strong>shift</strong> odstranění a vrácení prvku
+<i>prvního</i> (což teoreticky znamená lineární časovou složitost). Opět si
+ukažme, jak se tato funkce může použít. Pole nejprve naplníme pomocí
+<strong>push</strong> a následně ho postupně vyprázdníme funkcí
+<strong>shift</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = {}
+printSeparator()
+print("original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('a')")
+push(a, "a")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('b')")
+push(a, "b")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('c')")
+push(a, "c")
+printArrayInLine(a)
+&nbsp;
+for i = 1, 5 <strong>do</strong>
+    printSeparator()
+    item = shift(a)
+    print("shifted item:", item)
+    print("after shift()")
+    printArrayInLine(a)
+<strong>end</strong>
+</pre>
+
+<p>Výsledek po spuštění demonstračního příkladu:</p>
+
+<pre>
+-------------------------------
+original array
+&nbsp;
+-------------------------------
+after push('a')
+a
+-------------------------------
+after push('b')
+a, b
+-------------------------------
+after push('c')
+a, b, c
+-------------------------------
+shifted item:   a
+after shift()
+b, c
+-------------------------------
+shifted item:   b
+after shift()
+c
+-------------------------------
+shifted item:   c
+after shift()
+&nbsp;
+-------------------------------
+shifted item:   nil
+after shift()
+&nbsp;
+-------------------------------
+shifted item:   nil
+after shift()
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;posledních třech krocích je opět
+vždy vráceno prázdné pole.</div></p>
+
+
+
+<p><a name="k12"></a></p>
+<h2 id="k12">12. Operace <strong>pop</strong></h2>
+
+<p>Operace nazvaná <strong>pop</strong> je pouze jmenným aliasem <a
+href="#k11">k&nbsp;výše popsané</a> funkci <strong>shift</strong>, takže jen
+pro úplnost:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = {}
+printSeparator()
+print("original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('a')")
+push(a, "a")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('b')")
+push(a, "b")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("after push('c')")
+push(a, "c")
+printArrayInLine(a)
+&nbsp;
+<strong>for</strong> i = 1, 5 <strong>do</strong>
+    printSeparator()
+    item = pop(a)
+    print("poped item:", item)
+    print("after pop()")
+    printArrayInLine(a)
+<strong>end</strong>
+</pre>
+
+<p>Výsledky by měly být stejné, jako v&nbsp;předchozím demonstračním
+příkladu:</p>
+
+<pre>
+-------------------------------
+original array
+&nbsp;
+-------------------------------
+after push('a')
+a
+-------------------------------
+after push('b')
+a, b
+-------------------------------
+after push('c')
+a, b, c
+-------------------------------
+poped item:     a
+after pop()
+b, c
+-------------------------------
+poped item:     b
+after pop()
+c
+-------------------------------
+poped item:     c
+after pop()
+&nbsp;
+-------------------------------
+poped item:     nil
+after pop()
+&nbsp;
+-------------------------------
+poped item:     nil
+after pop()
+</pre>
+
+
+
+<p><a name="k13"></a></p>
+<h2 id="k13">13. Řez polem s&nbsp;využitím operace <strong>slice</strong></h2>
+
+<p>Podobně jako <strong>range</strong>, <strong>first</strong> a
+<strong>last</strong> patří do běžného repertoáru knihoven pro práci se
+sekvencemi popř.&nbsp;s&nbsp;poli (seznamy) i funkce nazvaná
+<strong>slice</strong>. Ta provádí řez polem, tj.&nbsp;vrací prvky ležící mezi
+dvojicí indexů. Jednotlivé implementace se od sebe odlišují podle toho, zda je
+horní index chápán &bdquo;včetně&ldquo; či &bdquo;kromě&ldquo;. V&nbsp;knihovně
+<i>Moses</i> jsou vráceny všechny prvky od prvního zadaného indexu do indexu
+druhého, a to včetně obou mezí.</p>
+
+<p><div class="rs-tip-major">Poznámka: samozřejmě v&nbsp;jazycích, které
+<i>slice</i> provádí s&nbsp;využitím speciální konstrukce nebo operátoru
+(Python) není nutné tuto funkci explicitně implementovat. To však není případ
+programovacího jazyka Lua.</div></p>
+
+<p>Ukázka použití operace <strong>slice</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = range(10)
+&nbsp;
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("slice(a)")
+printArrayInLine(slice(a))
+&nbsp;
+printSeparator()
+print("slice(a, 5)")
+printArrayInLine(slice(a, 5))
+&nbsp;
+printSeparator()
+print("slice(a, 5, 5)")
+printArrayInLine(slice(a, 5, 5))
+&nbsp;
+printSeparator()
+print("slice(a, 4, 8)")
+printArrayInLine(slice(a, 4, 8))
+&nbsp;
+printSeparator()
+print("slice(a, 0, 100)")
+printArrayInLine(slice(a, 0, 100))
+&nbsp;
+printSeparator()
+print("slice(a, 100, 0)")
+printArrayInLine(slice(a, 100, 0))
+</pre>
+
+<p>Z&nbsp;výsledků zobrazených pod tímto odstavcem je patrné, že pokud horní či
+dolní index přesahuje meze pole, použije se index 1 popř.&nbsp;index
+odpovídající délce pole (#pole):</p>
+
+<pre>
+-------------------------------
+Original array
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+-------------------------------
+slice(a)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+-------------------------------
+slice(a, 5)
+5, 6, 7, 8, 9, 10
+-------------------------------
+slice(a, 5, 5)
+5
+-------------------------------
+slice(a, 4, 8)
+4, 5, 6, 7, 8
+-------------------------------
+slice(a, 0, 100)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+-------------------------------
+slice(a, 100, 0)
+&nbsp;
+</pre>
+
+
+
+<p><a name="k14"></a></p>
+<h2 id="k14">14. Získání unikátních prvků v&nbsp;poli</h2>
+
+<p>Další potenciálně velmi užitečnou operací je získání unikátních prvků
+v&nbsp;poli, tj.&nbsp;přečtení nového pole, v&nbsp;němž se každá hodnota
+vyskytuje maximálně jedenkrát. Právě díky této operaci lze s&nbsp;poli pracovat
+stejně jako s&nbsp;množinami. Prvky v&nbsp;poli přitom nemusí být nijak
+uspořádány, což je ostatně patrné i z&nbsp;následujícího demonstračního
+příkladu:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("-------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = range(10)
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+print("unique(a)")
+printArrayInLine(unique(a))
+&nbsp;
+a = {1, 2, 3, 1, 2, 3}
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+print("unique(a)")
+printArrayInLine(unique(a))
+&nbsp;
+a = {3, 2, 1, 1, 2, 3}
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+print("unique(a)")
+printArrayInLine(unique(a))
+</pre>
+
+<p>Povšimněte si, jakým způsobem jsou uspořádány prvky ve výsledném poli.
+Z&nbsp;tohoto uspořádání lze vyčíst, jak vlastně pracuje algoritmus, nad nímž
+je funkce <strong>unique</strong> postavena:</p>
+
+<pre>
+-------------------------------
+Original array
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+unique(a)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+-------------------------------
+Original array
+1, 2, 3, 1, 2, 3
+unique(a)
+1, 2, 3
+-------------------------------
+Original array
+3, 2, 1, 1, 2, 3
+unique(a)
+3, 2, 1
+</pre>
+
+
+
+<p><a name="k15"></a></p>
+<h2 id="k15">15. Výběr prvků ze začátku pole funkcí vyššího řádu <strong>selectWhile</strong></h2>
+
+<p>Z&nbsp;polí je možné získat začátek či naopak zbytek pole s&nbsp;využitím
+funkcí nazvaných <strong>selectWhile</strong> a <strong>dropWhile</strong>.
+Těmto funkcím je zapotřebí ve druhém parametru předat takzvaný <i>predikát</i>
+určující, zda prvek splňuje nějakou podmínku (ovšem pozor &ndash; chování je
+odlišné od funkce <strong>filter</strong> popsané <a
+href="#k17">v&nbsp;sedmnácté kapitole</a>). V&nbsp;případě druhého parametru
+předávaného do <strong>selectWhile</strong> a <strong>dropWhile</strong> se
+jedná o běžnou funkci popř.&nbsp;o funkci anonymní, která by měla akceptovat
+jeden parametr (hodnotu prvku ze sekvence) a vracet by měla pravdivostní
+hodnotu <strong>true</strong> či <strong>false</strong>
+popř.&nbsp;<strong>nil</strong>, který má v&nbsp;kontextu pravdivostních hodnot
+stejný význam jako <strong>true</strong>.</p>
+
+<p>Rozdíly oproti funkcím z&nbsp;knihovny <i>Lua Fun</i> jsou shrnuty
+v&nbsp;tabulce:</p>
+
+<table>
+<tr><th>#</th><th>Funkce z&nbsp;Lua Fun</th><th>Funkce z&nbsp;Moses</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>take_while(predikát, sekvence)</td><td>selectWhile(pole, predikát)</td><td>získání prvků ze začátku sekvence na základě zadané podmínky</td></tr>
+<tr><td>2</td><td>drop_while(predikát, sekvence)</td><td>dropWhile(pole, predikát)</td><td>získání nové sekvence získané přeskočením prvků na začátku základě podmínky</td></tr>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, že je odlišné i pořadí
+parametrů předávaných do těchto funkcí. To je poměrně nešťastná
+situace.</div></p>
+
+<p>V&nbsp;dalším demonstračním příkladu si ukážeme základní chování funkce
+vyššího řádu <strong>selectWhile</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("--------------------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = range(10)
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("selectWhile(a, function (x) return x&lt;=5 end)")
+printArrayInLine(selectWhile(a, function (x) return x&lt;=5 end))
+&nbsp;
+printSeparator()
+print("selectWhile(a, function (x) return x%2 == 1 end)")
+printArrayInLine(selectWhile(a, function (x) return x%2 == 1 end))
+&nbsp;
+printSeparator()
+print("selectWhile(a, function (x) return true end)")
+printArrayInLine(selectWhile(a, function (x) return true end))
+&nbsp;
+printSeparator()
+print("selectWhile(a, function (x) return false end)")
+printArrayInLine(selectWhile(a, function (x) return false end))
+</pre>
+
+<p>Výsledky získané po spuštění ukazují, jak se tato funkce chová:</p>
+
+<pre>
+--------------------------------------------
+Original array
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+selectWhile(a, function (x) return x&lt;=5 end)
+1, 2, 3, 4, 5
+--------------------------------------------
+selectWhile(a, function (x) return x%2 == 1 end)
+1
+--------------------------------------------
+selectWhile(a, function (x) return true end)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+selectWhile(a, function (x) return false end)
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;posledním příkladu je vráceno
+prázdné pole, protože predikát již od začátku vrátil hodnotu
+<strong>false</strong>, tudíž je další zpracování prvků pole
+ukončeno.</div></p>
+
+
+
+<p><a name="k16"></a></p>
+<h2 id="k16">16. Přeskočení prvků ze začátku pole funkcí vyššího řádu <strong>dropWhile</strong></h2>
+
+<p>Logickým opakem funkce <strong>selectWhile</strong> <a
+href="#k15">z&nbsp;předchozí kapitoly</a> je funkce nazvaná
+<strong>dropWhile</strong>, která dokáže na základě hodnoty vracené
+z&nbsp;predikátu (typicky z&nbsp;anonymní funkce) přeskočit prvky na začátku
+sekvence. Až na opačné pořadí parametrů se tato funkce chová podobně jako
+prakticky stejně pojmenovaná funkce <strong>drop_while</strong> z&nbsp;knihovny
+<i>Lua Fun</i>, takže se ihned podívejme na demonstrační příklad:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("--------------------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = range(10)
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("dropWhile(a, function (x) return x&lt;=5 end)")
+printArrayInLine(dropWhile(a, function (x) return x&lt;=5 end))
+&nbsp;
+printSeparator()
+print("dropWhile(a, function (x) return x%2 == 1 end)")
+printArrayInLine(dropWhile(a, function (x) return x%2 == 1 end))
+&nbsp;
+printSeparator()
+print("dropWhile(a, function (x) return true end)")
+printArrayInLine(dropWhile(a, function (x) return true end))
+&nbsp;
+printSeparator()
+print("dropWhile(a, function (x) return false end)")
+printArrayInLine(dropWhile(a, function (x) return false end))
+</pre>
+
+<p>Z&nbsp;vytištěných zpráv je patrné, že je skutečně možné přeskočit prvky na
+začátku pole (první výsledek), popř.&nbsp;dokonce získat prázdné pole
+(předposlední výsledek) či pole odpovídající poli původnímu (výsledek
+poslední):</p>
+
+<pre>
+--------------------------------------------
+Original array
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+dropWhile(a, function (x) return x&lt;=5 end)
+6, 7, 8, 9, 10
+--------------------------------------------
+dropWhile(a, function (x) return x%2 == 1 end)
+2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+dropWhile(a, function (x) return true end)
+&nbsp;
+--------------------------------------------
+dropWhile(a, function (x) return false end)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+</pre>
+
+
+
+<p><a name="k17"></a></p>
+<h2 id="k17">17. Výběr prvků z&nbsp;pole s&nbsp;využitím funkce vyššího řádu <strong>filter</strong></h2>
+
+<p>Poslední funkcí, kterou si v&nbsp;dnešním článku popíšeme, je funkce nazvaná
+<strong>filter</strong>. I s&nbsp;touto funkcí jsme se seznámili minule při
+popisu knihovny <i>Lua Fun</i>, takže si jen v&nbsp;krátkosti shrňme její
+základní vlastnosti. Tato funkce postupně prochází všemi prvky pole a pro každý
+takto získaný prvek (resp.&nbsp;přesněji řečeno pro jeho hodnotu) volá nějakou
+programátorem zvolenou funkci &ndash; takzvaný <i>predikát</i>. V&nbsp;případě,
+že tato funkce vrátí pravdivostní hodnotu <strong>true</strong> je prvek vložen
+do nového pole, které je výsledkem funkce <strong>filter</strong>. Pokud naopak
+funkce/predikát vrátí hodnotu <strong>false</strong> nebo <strong>nil</strong>,
+je takový prvek ignorován. Kvůli tomu, že do funkce <strong>filter</strong>
+předáváme jinou funkci, je <strong>filter</strong> funkcí vyššího řádu. Ukažme
+si příklad použití:</p>
+
+<pre>
+<i>-- načtení knihovny Moses a současně import symbolů do globálního jmenného prostoru</i>
+M = require "moses"
+M.import()
+&nbsp;
+&nbsp;
+<i>-- tisk obsahu pole</i>
+<strong>function</strong> printArrayInLine(array)
+    <strong>for</strong> i, value in ipairs(array) <strong>do</strong>
+        io.write(value)
+        <strong>if</strong> i ~= #array <strong>then</strong>
+            io.write(", ")
+        <strong>end</strong>
+    <strong>end</strong>
+    print()
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- oddělení obsahu</i>
+<strong>function</strong> printSeparator()
+    print("--------------------------------------------")
+<strong>end</strong>
+&nbsp;
+&nbsp;
+a = range(10)
+printSeparator()
+print("Original array")
+printArrayInLine(a)
+&nbsp;
+printSeparator()
+print("filter(a, function (x) return x&lt;=5 end)")
+printArrayInLine(filter(a, function (x) return x&lt;=5 end))
+&nbsp;
+printSeparator()
+print("filter(a, function (x) return x%2 == 1 end)")
+printArrayInLine(filter(a, function (x) return x%2 == 1 end))
+&nbsp;
+printSeparator()
+print("filter(a, function (x) return true end)")
+printArrayInLine(filter(a, function (x) return true end))
+&nbsp;
+printSeparator()
+print("filter(a, function (x) return false end)")
+printArrayInLine(filter(a, function (x) return false end))
+</pre>
+
+<p>Výsledky získané po spuštění tohoto demonstračního příkladu:</p>
+
+<pre>
+--------------------------------------------
+Original array
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+filter(a, function (x) return x&lt;=5 end)
+1, 2, 3, 4, 5
+--------------------------------------------
+filter(a, function (x) return x%2 == 1 end)
+1, 3, 5, 7, 9
+--------------------------------------------
+filter(a, function (x) return true end)
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+--------------------------------------------
+filter(a, function (x) return false end)
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: v&nbsp;posledním příkladu bylo získáno
+prázdné pole, což je očekávané chování, neboť predikát pro všechny prvky
+(jejich hodnoty) vracel pravdivostní hodnotu <strong>false</strong>.</div></p>
+
+
+
+<p><a name="k18"></a></p>
+<h2 id="k18">18. Repositář s&nbsp;demonstračními příklady</h2>
+
+<p>Zdrojové kódy všech dnes použitých demonstračních příkladů byly uloženy do
+nového Git repositáře, který je dostupný na adrese <a
+href="https://github.com/tisnik/functional-lua">https://github.com/tisnik/functional-lua</a>.
+V&nbsp;případě, že nebudete chtít klonovat celý repositář (ten je ovšem &ndash;
+alespoň prozatím &ndash; velmi malý, dnes má přibližně několik jednotek
+kilobajtů), můžete namísto toho použít odkazy na jednotlivé demonstrační
+příklady a jejich části, které naleznete v&nbsp;následující tabulce:</p>
+
+<table>
+<tr><th> #</th><th>Příklad</th><th>Stručný popis</th><th>Cesta</th></tr>
+<tr><td> 1</td><td>01_install_test.lua</td><td>test korektní instalace knihovny Moses</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/01_install_test.lua">https://github.com/tisnik/functional-lua/tree/master/moses/01_install_test.lua</a></td></tr>
+<tr><td> 2</td><td>02_import_everything.lua</td><td>import funkcí do globálního jmenného prostoru</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/02_import_everything.lua">https://github.com/tisnik/functional-lua/tree/master/moses/02_import_everything.lua</a></td></tr>
+<tr><td> 3</td><td>03_import_into_context.lua</td><td>import funkcí do zvoleného kontextu</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/03_import_into_context.lua">https://github.com/tisnik/functional-lua/tree/master/moses/03_import_into_context.lua</a></td></tr>
+<tr><td> 4</td><td>04_zeros.lua</td><td>vytvoření pole s&nbsp;nulovými prvky</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/04_zeros.lua">https://github.com/tisnik/functional-lua/tree/master/moses/04_zeros.lua</a></td></tr>
+<tr><td> 5</td><td>05_ones.lua</td><td>vytvoření pole se všemi prvky nastavenými na jedničku</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/05_ones.lua">https://github.com/tisnik/functional-lua/tree/master/moses/05_ones.lua</a></td></tr>
+<tr><td> 6</td><td>06_rep.lua</td><td>vytvoření pole s&nbsp;opakujícími se prvky stejné hodnoty</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/06_rep.lua">https://github.com/tisnik/functional-lua/tree/master/moses/06_rep.lua</a></td></tr>
+<tr><td> 7</td><td>07_vector.lua</td><td>vytvoření pole s&nbsp;opakujícími se prvky stejné hodnoty</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/07_vector.lua">https://github.com/tisnik/functional-lua/tree/master/moses/07_vector.lua</a></td></tr>
+<tr><td> 8</td><td>08_range.lua</td><td>funkce pro vytvoření sekvence číselných hodnot v&nbsp;poli</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/08_range.lua">https://github.com/tisnik/functional-lua/tree/master/moses/08_range.lua</a></td></tr>
+<tr><td> 9</td><td>09_reverse_range.lua</td><td>využití funkce <strong>reverse</strong> pro otočení obsahu pole</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/09_reverse_range.lua">https://github.com/tisnik/functional-lua/tree/master/moses/09_reverse_range.lua</a></td></tr>
+<tr><td>10</td><td>10_first_last.lua</td><td>získání prvních či posledních n prvků pole</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/10_first_last.lua">https://github.com/tisnik/functional-lua/tree/master/moses/10_first_last.lua</a></td></tr>
+<tr><td>11</td><td>11_initial_rest.lua</td><td>získání prvků ze začátku či z&nbsp;konce pole</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/11_initial_rest.lua">https://github.com/tisnik/functional-lua/tree/master/moses/11_initial_rest.lua</a></td></tr>
+<tr><td>12</td><td>12_set_operations.lua</td><td>pole použité ve funkci množiny (<i>set</i>)</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/12_set_operations.lua">https://github.com/tisnik/functional-lua/tree/master/moses/12_set_operations.lua</a></td></tr>
+<tr><td>13</td><td>13_stack.lua</td><td>pole použité ve funkci zásobníku (<i>stack</i>)</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/13_stack.lua">https://github.com/tisnik/functional-lua/tree/master/moses/13_stack.lua</a></td></tr>
+<tr><td>14</td><td>14_queue.lua</td><td>pole použité ve funkci fronty (<i>queue</i>)</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/14_queue.lua">https://github.com/tisnik/functional-lua/tree/master/moses/14_queue.lua</a></td></tr>
+<tr><td>15</td><td>15_queue_push_pop.lua</td><td>alternativní pojmenování některých operací</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/15_queue_push_pop.lua">https://github.com/tisnik/functional-lua/tree/master/moses/15_queue_push_pop.lua</a></td></tr>
+<tr><td>16</td><td>16_slice.lua</td><td>provedení řezu pole</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/16_slice.lua">https://github.com/tisnik/functional-lua/tree/master/moses/16_slice.lua</a></td></tr>
+<tr><td>17</td><td>17_unique.lua</td><td>získání nového pole s&nbsp;unikátními prvky</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/17_unique.lua">https://github.com/tisnik/functional-lua/tree/master/moses/17_unique.lua</a></td></tr>
+<tr><td>18</td><td>18_select_while.lua</td><td>výběr prvků z&nbsp;pole na základě funkce vyššího řádu <strong>select_while</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/18_select_while.lua">https://github.com/tisnik/functional-lua/tree/master/moses/18_select_while.lua</a></td></tr>
+<tr><td>19</td><td>19_drop_while.lua</td><td>výběr prvků z&nbsp;pole na základě funkce vyššího řádu <strong>drop_while</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/19_drop_while.lua">https://github.com/tisnik/functional-lua/tree/master/moses/19_drop_while.lua</a></td></tr>
+<tr><td>20</td><td>20_filter.lua</td><td>funkce vyššího řádu <strong>filter</strong> pro výběr prvků z&nbsp;pole</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/moses/20_filter.lua">https://github.com/tisnik/functional-lua/tree/master/moses/20_filter.lua</a></td></tr>
+</table>
+
+
+
+<p><a name="k19"></a></p>
+<h2 id="k19">19. Články o programovacím jazyce Lua i o technologii LuaJITu</h2>
+
+<p>Předchozí dva články o funkcionálním stylu programování podporovaného
+knihovnou <i>Lua Fun</i>:</p>
+
+<ol>
+
+<li>Lua Fun: knihovna pro zpracování konečných i nekonečných sekvencí v jazyce Lua<br />
+<a href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua/">https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua/</a>
+</li>
+
+<li>Lua Fun: knihovna pro zpracování konečných i nekonečných sekvencí v jazyce Lua (dokončení)<br />
+<a href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua-dokonceni/">https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua-dokonceni/</a>
+</li>
+
+</ol>
+
+<p>Programovacím jazykem Lua jsme se již na stránkách Rootu poměrně podrobně
+zabývali <a
+href="https://www.root.cz/serialy/programovaci-jazyk-lua/">v&nbsp;samostatném
+seriálu</a>. Jedná se o snadno naučitelný jazyk, který je ovšem (mj.&nbsp;i
+díky konceptu metatabulek) rozšiřitelný a poměrně tvárný. Viz též následující
+odkazy na již vydané články (včetně odkazu na e-book, jenž na základě těchto
+článků později vznikl):</p>
+
+<ol>
+
+<li>Programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua/">https://www.root.cz/clanky/programovaci-jazyk-lua/</a>
+</li>
+
+<li>Základní konstrukce v programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/zakladni-konstrukce-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/zakladni-konstrukce-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Operátory a asociativní pole v&nbsp;jazyku Lua<br />
+<a href="https://www.root.cz/clanky/operatory-a-asociativni-pole-v-jazyku-lua/">https://www.root.cz/clanky/operatory-a-asociativni-pole-v-jazyku-lua/</a>
+</li>
+
+<li>Funkce v&nbsp;programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Funkce v&nbsp;programovacím jazyku Lua - uzávěry<br />
+<a href="https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua-uzavery/">https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua-uzavery/</a>
+</li>
+
+<li>Programovací jazyk Lua vestavěný do aplikací<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-vestaveny-do-aplikaci/">https://www.root.cz/clanky/programovaci-jazyk-lua-vestaveny-do-aplikaci/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;aplikacích II<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-aplikacich-ii/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-aplikacich-ii/</a>
+</li>
+
+<li>Objektově orientované programování v&nbsp;Lua<br />
+<a href="https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua/">https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua/</a>
+</li>
+
+<li>Objektově orientované programování v&nbsp;Lua II<br />
+<a href="https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua-ii/">https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua-ii/</a>
+</li>
+
+<li>Programovací jazyk Lua a koprogramy<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-a-koprogramy/">https://www.root.cz/clanky/programovaci-jazyk-lua-a-koprogramy/</a>
+</li>
+
+<li>Knihovny a frameworky pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/knihovny-a-frameworky-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/knihovny-a-frameworky-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>Lua + LÖVE: vytvořte si vlastní hru<br />
+<a href="https://www.root.cz/clanky/lua-love-vytvorte-si-vlastni-hru/">https://www.root.cz/clanky/lua-love-vytvorte-si-vlastni-hru/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love/">https://www.root.cz/clanky/hratky-se-systemem-love/</a>
+</li>
+
+<li>Vytváříme hru v&nbsp;systému LÖVE<br />
+<a href="https://www.root.cz/clanky/vytvarime-hru-v-systemu-love/">https://www.root.cz/clanky/vytvarime-hru-v-systemu-love/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - částicové systémy<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-casticove-systemy/">https://www.root.cz/clanky/hratky-se-systemem-love-casticove-systemy/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE – kolize a odrazy těles<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-ndash-kolize-a-odrazy-teles/">https://www.root.cz/clanky/hratky-se-systemem-love-ndash-kolize-a-odrazy-teles/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - kolize a odrazy těles II<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-kolize-a-odrazy-teles-ii/">https://www.root.cz/clanky/hratky-se-systemem-love-kolize-a-odrazy-teles-ii/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - pružné vazby mezi tělesy<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-pruzne-vazby-mezi-telesy/">https://www.root.cz/clanky/hratky-se-systemem-love-pruzne-vazby-mezi-telesy/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - dokončení<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-dokonceni/">https://www.root.cz/clanky/hratky-se-systemem-love-dokonceni/</a>
+</li>
+
+<li>LuaJ – implementace jazyka Lua v&nbsp;Javě<br />
+<a href="https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/">https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/</a>
+</li>
+
+<li>LuaJ a skriptování podle specifikace JSR-223<br />
+<a href="https://www.root.cz/clanky/luaj-a-skriptovani-podle-specifikace-jsr-223/">https://www.root.cz/clanky/luaj-a-skriptovani-podle-specifikace-jsr-223/</a>
+</li>
+
+<li>Metalua: programovatelné rozšíření sémantiky jazyka Lua<br />
+<a href="https://www.root.cz/clanky/metalua-programovatelne-rozsireni-semantiky-jazyka-lua/">https://www.root.cz/clanky/metalua-programovatelne-rozsireni-semantiky-jazyka-lua/</a>
+</li>
+
+<li>Metalua: užitečná rozšíření jazyka Lua<br />
+<a href="https://www.root.cz/clanky/metalua-uzitecna-rozsireni-jazyka-lua/">https://www.root.cz/clanky/metalua-uzitecna-rozsireni-jazyka-lua/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;roli skriptovacího jazyka pro WWW stránky<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/</a>
+</li>
+
+<li>Interpretry, překladače, JIT překladače a transpřekladače programovacího jazyka Lua<br />
+<a href="https://www.root.cz/clanky/interpretry-prekladace-jit-prekladace-a-transprekladace-programovaciho-jazyka-lua/">https://www.root.cz/clanky/interpretry-prekladace-jit-prekladace-a-transprekladace-programovaciho-jazyka-lua/</a>
+</li>
+
+<li>Kooperace mezi jazykem Lua a nativním (céčkovým) kódem<br />
+<a href="https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem/">https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem/</a>
+</li>
+
+<li>Kooperace mezi jazykem Lua a nativním (céčkovým) kódem: knihovna FFI<br />
+<a href="https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem-knihovna-ffi/">https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem-knihovna-ffi/</a>
+</li>
+
+<li>Profilery pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/profilery-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/profilery-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>Využití knihovny debug v&nbsp;programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/vyuziti-knihovny-debug-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/vyuziti-knihovny-debug-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Programovací jazyk Lua (e-book)<br />
+<a href="https://www.knihydobrovsky.cz/e-kniha/programovaci-jazyk-lua-240253190">https://www.knihydobrovsky.cz/e-kniha/programovaci-jazyk-lua-240253190</a>
+</li>
+
+</ol>
+
+<p>Původně byla Lua realizována jako klasický interpret &ndash; prováděl se
+automatický a prakticky okamžitý překlad do bajtkódu, který byl následně
+interpretován. Později byl vytvořen i plnohodnotný (a nutno podotknout, že až
+neobvykle dobrý) just-in-time (JIT) překladač nazvaný LuaJIT. Touto zajímavou
+technologií jsme se zabývali v&nbsp;následující sérii článků (které jsou
+poněkud paradoxně součástí seriálu o <a
+href="https://www.root.cz/serialy/programovaci-jazyk-java-a-jvm/">programovacím
+jazyku Java a JVM</a>):</p>
+
+<ol>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (2)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-2/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-2/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (3)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-3/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-3/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (4)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-4/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-4/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (5 – tabulky a pole)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-5-tabulky-a-pole/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-5-tabulky-a-pole/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (6 – překlad programových smyček do mezijazyka LuaJITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-6-preklad-programovych-smycek-do-mezijazyka-luajitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-6-preklad-programovych-smycek-do-mezijazyka-luajitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (7 – dokončení popisu mezijazyka LuaJITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-7-dokonceni-popisu-mezijazyka-luajitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-7-dokonceni-popisu-mezijazyka-luajitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (8 – základní vlastnosti trasovacího JITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-8-zakladni-vlastnosti-trasovaciho-jitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-8-zakladni-vlastnosti-trasovaciho-jitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (9 – další vlastnosti trasovacího JITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-9-dalsi-vlastnosti-trasovaciho-jitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-9-dalsi-vlastnosti-trasovaciho-jitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (10 – JIT překlad do nativního kódu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-10-jit-preklad-do-nativniho-kodu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-10-jit-preklad-do-nativniho-kodu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (11 – JIT překlad do nativního kódu procesorů s architekturami x86 a ARM)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-11-jit-preklad-do-nativniho-kodu-procesoru-s-architekturami-x86-a-arm/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-11-jit-preklad-do-nativniho-kodu-procesoru-s-architekturami-x86-a-arm/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (12 – překlad operací s reálnými čísly)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-12-preklad-operaci-s-realnymi-cisly/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-12-preklad-operaci-s-realnymi-cisly/</a>
+</li>
+
+</ol>
+
+<p>A konečně nesmíme zapomenout na to, že kromě původní implementace
+interpretru a LuaJITu existuje celá řada dalších implementací tohoto
+programovacího jazyka. Některé z&nbsp;těchto implementací byly zmíněny
+v&nbsp;následujících článcích:</p>
+
+<ol>
+
+<li>Skriptovací jazyk Lua v&nbsp;aplikacích naprogramovaných v&nbsp;Go<br />
+<a href="https://www.root.cz/clanky/skriptovaci-jazyk-lua-v-aplikacich-naprogramovanych-v-go/">https://www.root.cz/clanky/skriptovaci-jazyk-lua-v-aplikacich-naprogramovanych-v-go/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;roli skriptovacího jazyka pro WWW stránky<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/</a>
+</li>
+
+<li>LuaJ – implementace jazyka Lua v&nbsp;Javě<br />
+<a href="https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/">https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/</a>
+</li>
+
+<li>Tvorba pluginů pro Vim s&nbsp;využitím programovacího jazyka Lua<br />
+<a href="https://www.root.cz/clanky/tvorba-pluginu-pro-vim-s-vyuzitim-programovaciho-jazyka-lua/">https://www.root.cz/clanky/tvorba-pluginu-pro-vim-s-vyuzitim-programovaciho-jazyka-lua/</a>
+</li>
+
+</ol>
+
+<p><div class="rs-tip-major">Poznámka: předchozí články sice nepokrývají
+ekosystém tohoto jazyka dokonale, ovšem přibližně 90% všech relevantních
+informací je uvedeno. To je v&nbsp;případě dalších ekosystémů (Java, Python,
+Ruby, ...) prakticky nemožné, resp.&nbsp;to není v&nbsp;silách jediného autora
+:-)</div></p>
+
+
+
+<p><a name="k20"></a></p>
+<h2 id="k20">20. Odkazy na Internetu</h2>
+
+<ol>
+
+<li>Repositář projektu Lua Fun<br />
+<a href="https://github.com/luafun/luafun">https://github.com/luafun/luafun</a>
+</li>
+
+<li>Lua Functional 0.1.3 documentation<br />
+<a href="https://luafun.github.io/reference.html">https://luafun.github.io/reference.html</a>
+</li>
+
+<li>Getting Started<br />
+<a href="https://luafun.github.io/getting_started.html">https://luafun.github.io/getting_started.html</a>
+</li>
+
+<li>Rockspec knihovny Fun<br />
+<a href="https://raw.githubusercontent.com/luafun/luafun/master/fun-scm-1.rockspec">https://raw.githubusercontent.com/luafun/luafun/master/fun-scm-1.rockspec</a>
+</li>
+
+<li>Awesome Lua &ndash; A curated list of quality Lua packages and resources.<br />
+<a href="https://github.com/LewisJEllis/awesome-lua">https://github.com/LewisJEllis/awesome-lua</a>
+</li>
+
+<li>Repositář projektu Moses<br />
+<a href="https://github.com/Yonaba/Moses/">https://github.com/Yonaba/Moses/</a>
+</li>
+
+<li>Lambda the Ultimate: Coroutines in Lua<br />
+<a href="http://lambda-the-ultimate.org/no­de/438">http://lambda-the-ultimate.org/no­de/438</a>
+</li>
+
+<li>Coroutines Tutorial<br />
+<a href="http://lua-users.org/wiki/Co­routinesTutori­al">http://lua-users.org/wiki/Co­routinesTutori­al</a>
+</li>
+
+<li>Lua Coroutines Versus Python Generators<br />
+<a href="http://lua-users.org/wiki/Lu­aCoroutinesVer­susPythonGene­rators">http://lua-users.org/wiki/Lu­aCoroutinesVer­susPythonGene­rators</a>
+</li>
+
+<li>Programming in Lua 9.1 – Coroutine Basics<br />
+<a href="http://www.lu­a.org/pil/9.1­.html">http://www.lu­a.org/pil/9.1­.html</a>
+</li>
+
+<li>Wikipedia CZ: Koprogram<br />
+<a href="http://cs.wiki­pedia.org/wiki/Ko­program">http://cs.wiki­pedia.org/wiki/Ko­program</a>
+</li>
+
+<li>Wikipedia EN: Coroutine<br />
+<a href="http://en.wiki­pedia.org/wiki/Co­routine">http://en.wiki­pedia.org/wiki/Co­routine</a>
+</li>
+
+<li>Repositář knihovny Moses<br />
+<a href="https://github.com/Yonaba/Moses/">https://github.com/Yonaba/Moses/</a>
+</li>
+
+<li>Návod k&nbsp;použití knihovny Moses<br />
+<a href="https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md">https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md</a>
+</li>
+
+<li>How to understand clojure's lazy-seq<br />
+<a href="https://stackoverflow.com/questions/44095400/how-to-understand-clojures-lazy-seq">https://stackoverflow.com/questions/44095400/how-to-understand-clojures-lazy-seq</a>
+</li>
+
+<li>Lua Implementations<br />
+<a href="http://lua-users.org/wiki/LuaImplementations">http://lua-users.org/wiki/LuaImplementations</a>
+</li>
+
+<li>Generator (computer programming)<br />
+<a href="https://en.wikipedia.org/wiki/Generator_(computer_programming)">https://en.wikipedia.org/wiki/Generator_(computer_programming)</a>
+</li>
+
+<li>Lambda the Ultimate: Coroutines in Lua,<br />
+<a href="http://lambda-the-ultimate.org/node/438">http://lambda-the-ultimate.org/node/438</a>
+</li>
+
+<li>Coroutines Tutorial,<br />
+<a href="http://lua-users.org/wiki/CoroutinesTutorial">http://lua-users.org/wiki/CoroutinesTutorial</a>
+</li>
+
+<li>Lua Coroutines Versus Python Generators,<br />
+<a href="http://lua-users.org/wiki/LuaCorouti­nesVersusPythonGenerators">http://lua-users.org/wiki/LuaCorouti­nesVersusPythonGenerators</a>
+</li>
+
+<li>Category:Lua na Rosetta code<br />
+<a href="https://rosettacode.org/wiki/Category:Lua">https://rosettacode.org/wiki/Category:Lua</a>
+</li>
+
+<li>Programming in Lua: 23 – The Debug Library<br />
+<a href="http://www.lua.org/pil/23.html">http://www.lua.org/pil/23.html</a>
+</li>
+
+<li>Programming in Lua: 23.1 – Introspective Facilities<br />
+<a href="http://www.lua.org/pil/23.1.html">http://www.lua.org/pil/23.1.html</a>
+</li>
+
+<li>Programming in Lua: 23.2 – Hooks<br />
+<a href="http://www.lua.org/pil/23.2.html">http://www.lua.org/pil/23.2.html</a>
+</li>
+
+<li>Lua 5.2 Reference Manual: 6.10 – The Debug Library<br />
+<a href="http://www.lua.org/manual/5­.2/manual.html#6.10">http://www.lua.org/manual/5­.2/manual.html#6.10</a>
+</li>
+
+<li>Turtles all the way down<br />
+<a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">https://en.wikipedia.org/wiki/Turtles_all_the_way_down</a>
+</li>
+
+<li>Issues k&nbsp;projektu LuaFun<br />
+<a href="https://github.com/luafun/luafun/issues">https://github.com/luafun/luafun/issues</a>
+</li>
+
+<li>Archived | Embed Lua for scriptable apps<br />
+<a href="https://developer.ibm.com/tutorials/l-embed-lua/">https://developer.ibm.com/tutorials/l-embed-lua/</a>
+</li>
+
+<li>Embedding Lua<br />
+<a href="https://www.oreilly.com/library/view/lua-quick-start/9781789343229/3a6f3daf-f74c-4a25-a125-584da58568e4.xhtml">https://www.oreilly.com/library/view/lua-quick-start/9781789343229/3a6f3daf-f74c-4a25-a125-584da58568e4.xhtml</a>
+</li>
+
+</ol>
+
+
+
+<p></p><p></p>
+<p><small>Autor: <a href="http://www.fit.vutbr.cz/~tisnovpa">Pavel Tišnovský</a> &nbsp; 2020</small></p>
+</body>
+</html>
+

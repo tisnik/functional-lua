@@ -1,0 +1,2485 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Lua Fun: knihovna pro zpracování konečných i nekonečných sekvencí v jazyce Lua (dokončení)</title>
+<meta name="Author" content="Pavel Tisnovsky" />
+<meta name="Generator" content="vim" />
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<style type="text/css">
+         body {color:#000000; background:#ffffff;}
+         h1  {font-family: arial, helvetica, sans-serif; color:#ffffff; background-color:#c00000; text-align:center; padding-left:1em}
+         h2  {font-family: arial, helvetica, sans-serif; color:#ffffff; background-color:#0000c0; padding-left:1em; text-align:left}
+         h3  {font-family: arial, helvetica, sans-serif; color:#000000; background-color:#c0c0c0; padding-left:1em; text-align:left}
+         h4  {font-family: arial, helvetica, sans-serif; color:#000000; background-color:#e0e0e0; padding-left:1em; text-align:left}
+         a   {font-family: arial, helvetica, sans-serif;}
+         li  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         ol  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         ul  {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify; width:450px;}
+         p   {font-family: arial, helvetica, sans-serif; color:#000000; text-align:justify;}
+         pre {background:#e0e0e0}
+</style>
+</head>
+
+<body>
+
+<h1>Lua Fun: knihovna pro zpracování konečných i nekonečných sekvencí v jazyce Lua (dokončení)</h1>
+
+<h3>Pavel Tišnovský</h3>
+
+<p></p>
+
+<h1>Úvodník</h1>
+
+<p>Ve druhé části článku o knihovně Lua Fun nejdříve dokončíme popis práce s&nbsp;nekonečnými sekvencemi a dále se budeme věnovat dalším užitečným funkcionálním technikám, které tato knihovna programátorům nabízí. Především se jedná o funkce typu map, filter a reduce (či fold).</p>
+
+
+
+<h2>Obsah</h2>
+
+<p><a href="#k01">1. Funkce <strong>nth</strong> a přístup k&nbsp;prvkům nekonečných sekvencí</a></p>
+<p><a href="#k02">2. Operace prováděné interně ve funkci <strong>nth</strong></a></p>
+<p><a href="#k03">3. Chování funkce <strong>take_n</strong> pro nekonečné sekvence</a></p>
+<p><a href="#k04">4. Chování funkce <strong>split</strong> pro nekonečné sekvence</a></p>
+<p><a href="#k05">5. Zazipování několika nekonečných sekvencí do nové sekvence</a></p>
+<p><a href="#k06">6. Kdy se tedy vyhodnocují prvky nekonečné sekvence získané funkcí <strong>zip</strong>?</a></p>
+<p><a href="#k07">7. Zjednodušení programů s&nbsp;využitím funkce <strong>each</strong></a></p>
+<p><a href="#k08">8. Výběr prvků do nové sekvence funkcí vyššího řádu <strong>filter</strong></a></p>
+<p><a href="#k09">9. Výběr prvků na základě aplikace predikátu <strong>match</strong> &ndash; výběr řetězců podle vzorku</a></p>
+<p><a href="#k10">10. Rozdělení prvků v&nbsp;sekvenci do dvou sekvencí funkcí <strong>partition</strong></a></p>
+<p><a href="#k11">11. Funkce vyššího řádu <strong>map</strong></a></p>
+<p><a href="#k12">12. Opakování sekvence funkcí/generátorem <strong>cycle</strong></a></p>
+<p><a href="#k13">13. Kompozice sekvencí</a></p>
+<p><a href="#k14">14. Přidání indexů k&nbsp;prvkům s&nbsp;využitím funkce <strong>enumerate</strong></a></p>
+<p><a href="#k15">15. Proložení prvků v&nbsp;sekvenci konstantními hodnotami</a></p>
+<p><a href="#k16">16. Funkce vyššího řádu <strong>foldl</strong> neboli <strong>reduce</strong></a></p>
+<p><a href="#k17">17. Přehled funkcí deklarovaných v&nbsp;knihovně <i>Lua Fun</i></a></p>
+<p><a href="#k18">18. Repositář s&nbsp;demonstračními příklady</a></p>
+<p><a href="#k19">19. Články o programovacím jazyce Lua i o technologii LuaJITu</a></p>
+<p><a href="#k20">20. Odkazy na Internetu</a></p>
+
+
+
+<p><a name="k01"></a></p>
+<h2 id="k01">1. Funkce <strong>nth</strong> a přístup k&nbsp;prvkům nekonečných sekvencí</h2>
+
+<p>Na <a
+href="https://www.root.cz/clanky/lua-fun-knihovna-pro-zpracovani-konecnych-i-nekonecnych-sekvenci-v-jazyce-lua/">úvodní
+článek o knihovně Lua Fun</a> dnes navážeme a dokončíme popis této užitečné a
+prakticky použitelné knihovny, která do značné míry rozšiřuje možnosti <a
+href="https://www.root.cz/serialy/programovaci-jazyk-lua/">programovacího
+jazyka Lua</a>. Nejdříve se budeme věnovat nekonečným sekvencím,
+tj.&nbsp;sekvencím hodnot vytvářených nějakou funkcí (či přesněji řečeno
+<i>generátorem</i>). Dále si popíšeme implementaci &bdquo;klasických&ldquo;
+operací, které nalezneme v&nbsp;prakticky všech funkcionálních programovacích
+jazycích. Jedná se o operace typu <strong>map</strong>, <strong>filter</strong>
+a <strong>reduce</strong> (tato funkce se někdy nazývá <strong>fold</strong> či
+přesněji <strong>foldl</strong>). I tyto operace knihovna <i>Lua Fun</i>
+pochopitelně plně podporuje.</p>
+
+<p>Nejdříve si připomeňme existenci funkce nazvané <strong>nth</strong>. Tato
+funkce umožňuje, jak již ostatně její název naznačuje, přístup k&nbsp;n-tému
+prvku sekvence, přičemž v&nbsp;programovacím jazyku Lua indexujeme prvky od
+jedničky a nikoli od nuly (což má své nesporné výhody, ovšem způsobuje to
+problémy při přechodu z&nbsp;programovacího jazyka z&nbsp;céčkové větve).
+Zajímavé je, že funkce <strong>nth</strong> dokáže pracovat jak
+s&nbsp;konečnými sekvencemi (zde může mít konstantní složitost), tak i se
+sekvencemi nekonečnými, kde je její složitost <i>O(n)</i>, protože je nutné
+k&nbsp;požadovanému prvku doiterovat. Ostatně je to patrné i ze způsobu
+implementace této funkce, který vypadá následovně:</p>
+
+<pre>
+<strong>local</strong> nth = <strong>function</strong>(n, gen_x, param_x, state_x)
+    assert(n &gt; 0, "invalid first argument to nth")
+    <i>-- An optimization for arrays and strings</i>
+    <strong>if</strong> gen_x == ipairs_gen <strong>then</strong>
+        <strong>return</strong> param_x[n]
+    <strong>elseif</strong> gen_x == string_gen <strong>then</strong>
+        <strong>if</strong> n &lt;= #param_x <strong>then</strong>
+            <strong>return</strong> string.sub(param_x, n, n)
+        <strong>else</strong>
+            <strong>return</strong> <strong>nil</strong>
+        <strong>end</strong>
+    <strong>end</strong>
+    <strong>for</strong> i=1,n-1,1 <strong>do</strong>
+        state_x = gen_x(param_x, state_x)
+        <strong>if</strong> state_x == <strong>nil</strong> <strong>then</strong>
+            <strong>return</strong> <strong>nil</strong>
+        <strong>end</strong>
+    <strong>end</strong>
+    <strong>return</strong> return_if_not_empty(gen_x(param_x, state_x))
+<strong>end</strong>
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, že jsou řešeny i stavy,
+kdy budeme chtít získat prvek, který již v&nbsp;sekvenci neexistuje.</div></p>
+
+<p>Vzhledem k&nbsp;tomu, že <strong>nth</strong> umožňuje získat prvek
+s&nbsp;určitým indexem i z&nbsp;nekonečné sekvence, můžeme si toto chování
+ověřit na dnešním prvním demonstračním příkladu, v&nbsp;němž budeme přistupovat
+k&nbsp;prvkům sekvence nulových čísel. Tuto sekvenci lze vytvořit generátorem
+<strong>zeros</strong>, který již byl popsán minule:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- generátor nul</i>
+print("zeros()")
+g = zeros()
+&nbsp;
+&nbsp;
+<i>-- pokus o přístup k prvkům sekvence</i>
+print("10th item:", nth(10, g))
+print("1000th item:", nth(1000, g))
+print("5th item:", nth(5, g))
+&nbsp;
+&nbsp;
+<i>-- generátor pseudonáhodných čísel</i>
+print()
+print("rands(100, 200)")
+g = rands(100, 200)
+&nbsp;
+&nbsp;
+<i>-- pokus o přístup k prvkům sekvence</i>
+print("10th item:", nth(10, g))
+print("1000th item:", nth(1000, g))
+print("5th item:", nth(5, g))
+&nbsp;
+&nbsp;
+<i>-- generátor stejných řetězců</i>
+print()
+print("xrepeat('*')")
+g = xrepeat("*")
+&nbsp;
+&nbsp;
+<i>-- pokus o přístup k prvkům sekvence</i>
+print("10th item:", nth(10, g))
+print("1000th item:", nth(1000, g))
+print("5th item:", nth(5, g))
+&nbsp;
+&nbsp;
+<i>-- generátor druhých mocnin přirozených čísel</i>
+print()
+print("tabulate()")
+g = tabulate(<strong>function</strong>(x) return (x+1)*(x+1) end)
+&nbsp;
+&nbsp;
+<i>-- pokus o přístup k prvkům sekvence</i>
+print("10th item:", nth(10, g))
+print("1000th item:", nth(1000, g))
+print("5th item:", nth(5, g))
+</pre>
+
+<p>Výsledek by měl po spuštění tohoto demonstračního příkladu vypadat
+následovně:</p>
+
+<pre>
+zeros()
+10th item:      0
+1000th item:    0
+5th item:       0
+&nbsp;
+rands(100, 200)
+10th item:      155
+1000th item:    144
+5th item:       151
+&nbsp;
+xrepeat('*')
+10th item:      *
+1000th item:    *
+5th item:       *
+&nbsp;
+tabulate()
+10th item:      100
+1000th item:    1000000
+5th item:       25
+</pre>
+
+<p>Chování pro neplatné indexy (včetně indexu nulového) můžeme snadno ověřit
+přímo v&nbsp;interaktivní smyčce REPL programovacího jazyka Lua:</p>
+
+<pre>
+&gt; <strong>require "fun"()</strong>
+&gt; <strong>g = zeros()</strong>
+&gt; <strong>print(nth(0, g))</strong>
+./fun.lua:299: invalid first argument to nth
+stack traceback:
+        [C]: in function 'assert'
+        ./fun.lua:299: in function &lt;./fun.lua:298&gt;
+        (...tail calls...)
+        stdin:1: in main chunk
+        [C]: in ?
+&nbsp;
+&gt; <strong>print(nth(-1, g))</strong>
+./fun.lua:299: invalid first argument to nth
+stack traceback:
+        [C]: in function 'assert'
+        ./fun.lua:299: in function &lt;./fun.lua:298&gt;
+        (...tail calls...)
+        stdin:1: in main chunk
+        [C]: in ?
+</pre>
+
+
+
+<p><a name="k02"></a></p>
+<h2 id="k02">2. Operace prováděné interně ve funkci <strong>nth</strong></h2>
+
+<p>Zdrojový kód funkce <strong>nth</strong> byl uveden <a
+href="#k01">v&nbsp;úvodní kapitole</a>. Pojďme si nyní otestovat, jak tato
+funkce pracuje s&nbsp;nekonečnou sekvencí vytvářenou s&nbsp;použitím vlastního
+generátoru. Původní zdrojový kód generátoru jsme již použili minule &ndash;
+jedná se o generátor druhých mocnin (kvadrátů) kladných čísel:</p>
+
+<pre>
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+</pre>
+
+<p>Povšimněte si, že se jedná o čistou funkci, jejíž návratová hodnota závisí
+pouze na hodnotě vstupního parametru. Navíc tato funkce nemá vedlejší efekty
+(<i>side effect</i>). Ovšem jeden vedlejší efekt můžeme přidat &ndash; funkce
+může vypisovat svůj vstup. To sice není příliš praktické chování, ale pro
+ladění se může hodit:</p>
+
+<pre>
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+</pre>
+
+<p>Tuto funkci použijeme ve vlastním generátoru:</p>
+
+<pre>
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+</pre>
+
+<p>A následně použijeme společně s&nbsp;funkcí <strong>nth</strong> pro získání
+n-tého prvku nekonečné sekvence:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> _, value <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+<i>-- pokus o přístup k prvkům sekvence</i>
+&nbsp;
+print()
+print("getting 9th item")
+g9 = nth(9, g)
+&nbsp;
+print()
+print("getting 10th item")
+g10 = nth(10, g)
+&nbsp;
+print()
+print("getting 5th item")
+g5 = nth(5, g)
+&nbsp;
+print()
+print("9th item:", g9)
+print("10th item:", g10)
+print("5th item:", g5)
+&nbsp;
+&nbsp;
+<i>-- pokus o přístup k nultému prvku (který neexistuje)</i>
+print()
+print("getting 0th item")
+g0 = nth(0, g)
+</pre>
+
+<p>Podívejme se nyní na chování funkce <strong>nth</strong>:</p>
+
+<pre>
+getting 9th item
+(iter)  0
+(iter)  1
+(iter)  2
+(iter)  3
+(iter)  4
+(iter)  5
+(iter)  6
+(iter)  7
+(iter)  8
+&nbsp;
+getting 10th item
+(iter)  0
+(iter)  1
+(iter)  2
+(iter)  3
+(iter)  4
+(iter)  5
+(iter)  6
+(iter)  7
+(iter)  8
+(iter)  9
+&nbsp;
+getting 5th item
+(iter)  0
+(iter)  1
+(iter)  2
+(iter)  3
+(iter)  4
+&nbsp;
+9th item:       81
+10th item:      100
+5th item:       25
+&nbsp;
+getting 0th item
+lua: ./fun.lua:299: invalid first argument to nth
+stack traceback:
+        [C]: in function 'assert'
+        ./fun.lua:299: in function &lt;./fun.lua:298&gt;
+        (...tail calls...)
+        19_nth_infinite_sequence_state.lua:56: in main chunk
+        [C]: in ?
+</pre>
+
+<p>Vidíme, že v&nbsp;případě nekonečných sekvencí vytvářených generátorem
+funkce <strong>nth</strong> musí generátor restartovat od prvního prvku, takže
+se v&nbsp;tomto případě skutečně jedná o časově relativně náročnou operaci se
+složitostí <i>O(n)</i>. Na to je zapotřebí dávat pozor v&nbsp;reálných
+programech.</p>
+
+<p><div class="rs-tip-major">Poznámka: co to znamená v&nbsp;praxi? Neměly by se
+používat počítané programové smyčky, v&nbsp;nichž se volá <strong>nth</strong>.
+Namísto toho by se mělo &ndash; pochopitelně pokud je to možné s&nbsp;ohledem
+na implementovaný algoritmus &ndash; využívat klasické rekurze, tedy na
+funkcích <strong>head</strong> a <strong>tail</strong> popř.&nbsp;pro LISPaře
+<strong>car</strong> a <strong>cdr</strong>.</div></p>
+
+
+
+<p><a name="k03"></a></p>
+<h2 id="k03">3. Chování funkce <strong>take_n</strong> pro nekonečné sekvence</h2>
+
+<p>Naprosto stejným postupem, tj.&nbsp;upraveným generátorem vypisujícím svůj
+vstupní parametr:</p>
+
+<pre>
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+</pre>
+
+<p>můžeme otestovat i chování další funkce nazvané <strong>take_n</strong>. I
+tuto funkci jsme si popsali minule, takže si dnes pouze připomeňme, že
+<strong>take_n</strong> umožňuje získat prvních <i>n</i> prvků z&nbsp;nějaké
+sekvence, ať již se jedná o sekvenci konečnou či nekonečnou. Podívejme se nyní
+na jednoduchý demonstrační příklad, který nám umožní otestovat základní chování
+této funkce:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> _, value <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+&nbsp;
+<i>-- první podsekvence</i>
+print()
+print("take_n(5, sequence)")
+print("----------------------")
+t5 = take_n(5, g)
+print("done\n")
+printSequence(t5)
+&nbsp;
+&nbsp;
+<i>-- druhá podsekvence</i>
+print()
+print("take_n(10, sequence)")
+print("----------------------")
+t10 = take_n(10, g)
+print("done\n")
+printSequence(t10)
+&nbsp;
+&nbsp;
+<i>-- třetí podsekvence</i>
+print()
+print("take_n(0, sequence)")
+print("----------------------")
+t0 = take_n(0, g)
+print("done\n")
+printSequence(t0)
+</pre>
+
+<p>Po spuštění tohoto demonstračního příkladu získáme zajímavé výsledky, které
+ukazují, že funkce <strong>take_n</strong> interně vytváří novou (pod)sekvenci,
+ale nijak se nesnaží přistupovat k&nbsp;prvkům původní sekvence (zpráva
+&bdquo;done&ldquo; je vypsána ještě před ladicími zprávami
+&bdquo;(iter)&ldquo;). To je velmi užitečné, protože obecně platí, že tato
+funkce má časovou složitost <i>O(1)</i>, a to nezávisle na délce sekvence (ta
+může být i nekonečná). A v&nbsp;mnoha algoritmech lze <strong>take_n</strong>
+použít, aniž by se posléze všechny prvky výsledné (pod)sekvence musely skutečně
+vyhodnocovat:</p>
+
+<pre>
+take_n(5, sequence)
+----------------------
+done
+&nbsp;
+(iter)  0
+1
+(iter)  1
+4
+(iter)  2
+9
+(iter)  3
+16
+(iter)  4
+25
+&nbsp;
+take_n(10, sequence)
+----------------------
+done
+&nbsp;
+(iter)  0
+1
+(iter)  1
+4
+(iter)  2
+9
+(iter)  3
+16
+(iter)  4
+25
+(iter)  5
+36
+(iter)  6
+49
+(iter)  7
+64
+(iter)  8
+81
+(iter)  9
+100
+&nbsp;
+take_n(0, sequence)
+----------------------
+done
+&nbsp;
+</pre>
+
+
+
+<p><a name="k04"></a></p>
+<h2 id="k04">4. Chování funkce <strong>split</strong> pro nekonečné sekvence</h2>
+
+<p>Další funkcí, která má podobné chování při zpracování nekonečných sekvencí,
+je funkce <strong>split</strong>, kterou jsme si taktéž popsali v&nbsp;úvodním
+článku. Připomeňme si, že tato funkce vrátí dvě podsekvence, přičemž první
+podsekvence odpovídá volání <strong>take_n</strong> a druhá volání
+<strong>drop_n</strong>. Chování si ověříme na generátoru, který na standardní
+výstup vypisuje generované hodnoty:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků nekonečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> _, value <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+&nbsp;
+<i>-- první dvojice podsekvencí</i>
+print()
+print("split(5, sequence)")
+print("----------------------")
+s1, s2 = split(5, g)
+print("done")
+printSequence(s1)
+&nbsp;
+&nbsp;
+<i>-- druhá dvojice podsekvencí</i>
+print()
+print("split(10, sequence)")
+print("----------------------")
+s1, s2 = split(10, g)
+print("done")
+printSequence(s1)
+&nbsp;
+&nbsp;
+<i>-- třetí dvojice podsekvencí</i>
+print()
+print("split(0, sequence)")
+print("----------------------")
+s1, s2 = split(0, g)
+print("done")
+printSequence(s1)
+</pre>
+
+<p>Výsledek ukazuje, v&nbsp;jakém okamžiku jsou vyhodnocovány prvky první
+sekvence i podsekvence. První část původní sekvence je vyhodnocena dvakrát:</p>
+
+<pre>
+split(5, sequence)
+----------------------
+(iter)  0
+(iter)  1
+(iter)  2
+(iter)  3
+(iter)  4
+(iter)  0
+<strong>done</strong>
+1
+(iter)  1
+4
+(iter)  2
+9
+(iter)  3
+16
+(iter)  4
+25
+&nbsp;
+split(10, sequence)
+----------------------
+(iter)  0
+(iter)  1
+(iter)  2
+(iter)  3
+(iter)  4
+(iter)  5
+(iter)  6
+(iter)  7
+(iter)  8
+(iter)  9
+(iter)  0
+<strong>done</strong>
+1
+(iter)  1
+4
+(iter)  2
+9
+(iter)  3
+16
+(iter)  4
+25
+(iter)  5
+36
+(iter)  6
+49
+(iter)  7
+64
+(iter)  8
+81
+(iter)  9
+100
+&nbsp;
+split(0, sequence)
+----------------------
+<strong>done</strong>
+</pre>
+
+
+
+<p><a name="k05"></a></p>
+<h2 id="k05">5. Zazipování několika nekonečných sekvencí do nové sekvence</h2>
+
+<p>V&nbsp;předchozích kapitolách jsme mohli vidět, že některé funkce musí
+vyhodnocovat prvky v&nbsp;sekvenci, zatímco jiné tuto časově náročnou operaci
+neprovádí. Do druhé skupiny patří i funkce nazvaná velmi příznačně
+<strong>zip</strong>, o které jsme se zmínili minule. Víme již, že tato funkce
+&bdquo;zazipuje&ldquo; několik sekvencí do sekvence jediné, přičemž první prvek
+nové sekvence je složen z&nbsp;prvních prvků sekvencí původních (jedná se o
+tabulku, resp.&nbsp;přesněji řečeno o n-tici) atd. Pokud této funkci předáme
+sekvence s&nbsp;konečným počtem prvků, bude výsledkem taková sekvence, jejíž
+délka bude odpovídat sekvenci nejkratší. Co se však stane v&nbsp;případě, kdy
+budou všechny vstupní sekvence nekonečné? V&nbsp;tomto případě bude výsledkem
+taktéž nekonečná sekvence, jejíž prvky nebudou funkcí <strong>zip</strong>
+vyhodnocovány. Ostatně se o tom můžeme snadno přesvědčit spuštěním
+následujícího demonstračního příkladu:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků nekonečné sekvence</i>
+<strong>function</strong> printZippedSequence(sequence, n)
+    i = 0
+    <strong>for</strong> index, a, b, c <strong>in</strong> iter(sequence) <strong>do</strong>
+        i = i + 1
+        <strong>if</strong> i &gt; n <strong>then</strong>
+            <strong>break</strong>
+        <strong>end</strong>
+        print(index, a, b, c)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g1 = tabulate(my_generator)
+&nbsp;
+<i>-- další generátor nekonečné sekvence </i>
+g2 = xrepeat("*")
+&nbsp;
+<i>-- třetí generátor nekonečné sekvence</i>
+g3 = zeros()
+&nbsp;
+<i>-- vytvoření zipu ze tří sekvencí</i>
+z1 = zip(g1, g2, g3)
+print()
+print("Zipped sequence (first ten items from infinite sequence)")
+print("--------------------------------------------------------")
+printZippedSequence(z1, 10)
+</pre>
+
+<p>Výsledná sekvence nazvaná <strong>z1</strong> bude nekonečná, takže
+z&nbsp;ní vypíšeme jen prvních deset prvků:</p>
+
+<pre>
+Zipped sequence (first ten items from infinite sequnce)
+-------------------------------------------------------
+table: 0x55a58afd17d0   1       *       0
+table: 0x55a58afd1900   4       *       0
+table: 0x55a58afd1a30   9       *       0
+table: 0x55a58afc1d20   16      *       0
+table: 0x55a58afc1e50   25      *       0
+table: 0x55a58afc1f80   36      *       0
+table: 0x55a58afc20b0   49      *       0
+table: 0x55a58afe5be0   64      *       0
+table: 0x55a58afe5d10   81      *       0
+table: 0x55a58afe5e40   100     *       0
+</pre>
+
+
+
+<p><a name="k06"></a></p>
+<h2 id="k06">6. Kdy se tedy vyhodnocují prvky nekonečné sekvence získané funkcí <strong>zip</strong>?</h2>
+
+<p>Nepatrnou úpravou generátoru &ndash; konkrétně přidáním ladicí funkce
+<strong>print</strong> &ndash; můžeme zjistit, ve kterém okamžiku se vlastně
+vyhodnocují prvky nekonečné sekvence, která byla získána funkcí
+<strong>zip</strong>. Upravený zdrojový kód demonstračního příkladu může
+vypadat následovně:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků nekonečné sekvence</i>
+<strong>function</strong> printZippedSequence(sequence, n)
+    i = 0
+    <strong>for</strong> index, a, b, c <strong>in</strong> iter(sequence) <strong>do</strong>
+        i = i + 1
+        <strong>if</strong> i &gt; n <strong>then</strong>
+            <strong>break</strong>
+        <strong>end</strong>
+        print(index, a, b, c)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    print("(iter)", x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g1 = tabulate(my_generator)
+&nbsp;
+<i>-- další generátor nekonečné sekvence </i>
+g2 = xrepeat("*")
+&nbsp;
+<i>-- třetí generátor nekonečné sekvence</i>
+g3 = zeros()
+&nbsp;
+<i>-- vytvoření zipu ze tří sekvencí</i>
+z1 = zip(g1, g2, g3)
+print()
+print("Zipped sequence (first ten items from infinite sequnce)")
+print("-------------------------------------------------------")
+printZippedSequence(z1, 10)
+</pre>
+
+<p>Po spuštění tohoto demonstračního příkladu je patrné, že samotné zavolání
+funkce <strong>zip</strong> nevede k&nbsp;vyhodnocení prvků sekvencí na vstupu.
+Teprve pokus o přístup k&nbsp;jednotlivým prvkům v&nbsp;iterační smyčce ve svém
+důsledku vede k&nbsp;volání generátoru:</p>
+
+<pre>
+Zipped sequence (first ten items from infinite sequnce)
+-------------------------------------------------------
+(iter)  0
+table: 0x556e569c8780   1       *       0
+(iter)  1
+table: 0x556e569c8950   4       *       0
+(iter)  2
+table: 0x556e569b8d20   9       *       0
+(iter)  3
+table: 0x556e569b8e80   16      *       0
+(iter)  4
+table: 0x556e569b8fe0   25      *       0
+(iter)  5
+table: 0x556e569b9110   36      *       0
+(iter)  6
+table: 0x556e569b9270   49      *       0
+(iter)  7
+table: 0x556e569b93d0   64      *       0
+(iter)  8
+table: 0x556e569dcbb0   81      *       0
+(iter)  9
+table: 0x556e569dcd10   100     *       0
+(iter)  10
+</pre>
+
+
+
+<p><a name="k07"></a></p>
+<h2 id="k07">7. Zjednodušení programů s&nbsp;využitím funkce <strong>each</strong></h2>
+
+<p>V&nbsp;předchozích demonstračních příkladech jsme používali klasickou smyčku
+<strong>for</strong> pro procházení všemi prvky sekvence. V&nbsp;případě
+&bdquo;zazipované&ldquo; sekvence složené ze tří konečných sekvencí mohl kód
+vypadat následovně:</p>
+
+<pre>
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printZippedSequence(sequence)
+    <strong>for</strong> _, a, b, c <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(a, b, c)
+    <strong>end</strong>
+<strong>end</strong>
+</pre>
+
+<p>Ovšem pravděpodobně vás napadlo, že se nejedná o příliš elegantní ani
+univerzální kód, protože (kromě dalších věcí) musíme dopředu vědět, kolik
+hodnot každý prvek sekvence obsahuje, nehledě na to, že opakovaný zápis
+programové smyčky začne být únavný. Ovšem i v&nbsp;tomto případě nám může
+pomoci knihovna <i>Lua Fun</i>, protože obsahuje funkci (vyššího řádu) nazvanou
+<strong>each</strong>. Té se předají dvě hodnoty: první hodnotou je nějaká
+funkce volaná pro každý prvek sekvence a druhou hodnotou je vlastní sekvence.
+Funkce <strong>each</strong> bude postupně iterovat přes prvky sekvence a pro
+každý volat první funkci. Ta by měla mít nějaký vedlejší efekt. Příkladem může
+být výpis všech prvků konečné sekvence tím, že pro každý její prvek bude
+zavolána funkce <strong>print</strong>:</p>
+
+<pre>
+each(print, sequence)
+</pre>
+
+<p>Použití této velmi užitečné funkce je patrné ze zdrojového kódu dalšího
+demonstračního příkladu:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    each(print, sequence)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g1 = tabulate(my_generator)
+&nbsp;
+<i>-- další generátor nekonečné sekvence </i>
+g2 = xrepeat("*")
+&nbsp;
+<i>-- třetí generátor nekonečné sekvence</i>
+g3 = zeros()
+&nbsp;
+<i>-- vytvoření zipu ze tří sekvencí</i>
+z1 = zip(g1, g2, g3)
+&nbsp;
+<i>-- získání prvních deseti prvků z původně nekonečné sekvence</i>
+t = take_n(10, z1)
+&nbsp;
+<i>-- výstup na terminál</i>
+print()
+print("Zipped sequence (first ten items from infinite sequnce)")
+print("-------------------------------------------------------")
+printSequence(t)
+</pre>
+
+<p>S&nbsp;výsledky, které odpovídají příkazům předchozím:</p>
+
+<pre>
+Zipped sequence (first ten items from infinite sequnce)
+-------------------------------------------------------
+1       *       0
+4       *       0
+9       *       0
+16      *       0
+25      *       0
+36      *       0
+49      *       0
+64      *       0
+81      *       0
+100     *       0
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: povšimněte si, jak jsme omezili počet
+vypisovaných prvků s&nbsp;využitím <strong>take_n</strong>, což je opět lepší,
+než neustálá kontrola počitadla v&nbsp;programové smyčce.</div></p>
+
+
+
+<p><a name="k08"></a></p>
+<h2 id="k08">8. Výběr prvků do nové sekvence funkcí vyššího řádu <strong>filter</strong></h2>
+
+<p>Funkci <strong>zip</strong> zmíněnou v&nbsp;předchozích kapitolách
+pravděpodobně mnoho čtenářů již zná z&nbsp;dalších programovacích jazyků. Týká
+se to i funkce nazvané <strong>filter</strong>, která dnes již patří
+k&nbsp;základní nabídce funkcí i v&nbsp;mainstreamových programovacích jazycích
+(kde bývá zobecněna pro zpracování libovolných <i>streamů</i> či
+<i>sekvencí</i>). I tato funkce je funkcí vyššího řádu, a to z&nbsp;toho
+důvodu, že jako svůj vstup akceptuje jinou funkci. Zde se konkrétně musí jednat
+o predikát, tedy o funkci vracející pro každý svůj vstup pravdivostní hodnotu
+<strong>true</strong> nebo <strong>false</strong>
+popř.&nbsp;<strong>nil</strong>. Na základě výsledné hodnoty predikátu se právě
+zpracovávaný prvek buď objeví ve výstupní sekvenci či nikoli &ndash; tato
+funkce tedy obecně vrací sekvenci, ale mnohdy s&nbsp;odlišným počtem prvků, než
+kolik jich má seznam vstupní (pokud není predikát splněn pro žádný prvek ze
+vstupní sekvence, bude výsledkem prázdná sekvence, naopak však může vzniknout i
+sekvence nekonečná).</p>
+
+<p>Podívejme se nyní na použití této funkce při tvorbě sekvence obsahující sudá
+čísla a jiné sekvence, tentokrát s&nbsp;čísly lichými:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    each(print, sequence)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+&nbsp;
+<i>-- první podsekvence</i>
+print()
+print("take_n(10, sequence)")
+print("----------------------")
+t10 = take_n(10, g)
+printSequence(t10)
+&nbsp;
+&nbsp;
+<i>-- provést filtraci</i>
+f1 = filter(<strong>function</strong>(x) <strong>return</strong> x % 2 == 0 <strong>end</strong>, g)
+print()
+print("even results")
+print("----------------------")
+t5 = take_n(5, f1)
+printSequence(t5)
+&nbsp;
+&nbsp;
+<i>-- provést filtraci</i>
+f2 = filter(<strong>function</strong>(x) <strong>return</strong> not(x % 2 == 0) <strong>end</strong>, g)
+print()
+print("odd results")
+print("----------------------")
+t5 = take_n(5, f2)
+printSequence(t5)
+</pre>
+
+<p>Po spuštění demonstrační příklad nejprve vypíše původní sekvenci, posléze
+výběr z&nbsp;této sekvence (jen sudá čísla) a následně další výběr (jen liché
+hodnoty):</p>
+
+<pre>
+take_n(10, sequence)
+----------------------
+1
+4
+9
+16
+25
+36
+49
+64
+81
+100
+&nbsp;
+even results
+----------------------
+4
+16
+36
+64
+100
+&nbsp;
+odd results
+----------------------
+1
+9
+25
+49
+81
+</pre>
+
+
+
+<p><a name="k09"></a></p>
+<h2 id="k09">9. Výběr prvků na základě aplikace predikátu <strong>match</strong> &ndash; výběr řetězců podle vzorku</h2>
+
+<p>Kromě výše zmíněné funkce vyššího řádu <strong>filter</strong> nabízí
+knihovna <i>Lua Fun</i> programátorům i funkci pojmenovanou
+<strong>grep</strong>. A skutečně &ndash; tato funkce připomíná chování příkazu
+<strong>grep</strong>, protože postupně prochází prvky sekvence (ty by měly
+obsahovat řetězec) a na základě porovnání hodnoty těchto řetězců se vzorkem se
+příslušný prvek vloží do nové sekvence či nikoli. Operace prováděné funkcí
+<strong>grep</strong> si můžeme ukázat na jednoduchém demonstračním příkladu,
+který bude zpracovávat sekvenci se jmény všech měsíců. Nejdříve se vypíšou
+všechny měsíce obsahující písmeno &bdquo;n&ldquo;, dále měsíce začínající
+řetězcem &bdquo;Cer&ldquo;, poté měsíce končící řetězcem &bdquo;en&ldquo; a
+nakonec všechny měsíce, přesněji měsíce odpovídající vzorku
+&bdquo;.&ldquo;:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- sekvence</i>
+months = {
+    "Leden",
+    "Unor",
+    "Brezen",
+    "Duben",
+    "Kveten",
+    "Cerven",
+    "Cervenec",
+    "Srpen",
+    "Zari",
+    "Rijen",
+    "Listopad",
+    "Prosinec"
+}
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    each(print, sequence)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+print("Mesice obsahujici znak 'n'")
+print("--------------------------")
+g1 = grep("n", months)
+printSequence(g1)
+&nbsp;
+&nbsp;
+print()
+print("Mesice zacinajici na 'Cer'")
+print("--------------------------")
+g2 = grep("^Cer", months)
+printSequence(g2)
+&nbsp;
+&nbsp;
+print()
+print("Mesice koncici na 'en'")
+print("--------------------------")
+g3 = grep("en$", months)
+printSequence(g3)
+&nbsp;
+&nbsp;
+print()
+print("Vsechny mesice")
+print("--------------------------")
+g4 = grep(".", months)
+printSequence(g4)
+</pre>
+
+<p>Výsledky získané po spuštění tohoto příkladu vypadají následovně:</p>
+
+<pre>
+Mesice obsahujici znak 'n'
+--------------------------
+Leden
+Unor
+Brezen
+Duben
+Kveten
+Cerven
+Cervenec
+Srpen
+Rijen
+Prosinec
+&nbsp;
+Mesice zacinajici na 'Cer'
+--------------------------
+Cerven
+Cervenec
+&nbsp;
+Mesice koncici na 'en'
+--------------------------
+Leden
+Brezen
+Duben
+Kveten
+Cerven
+Srpen
+Rijen
+&nbsp;
+Vsechny mesice
+--------------------------
+Leden
+Unor
+Brezen
+Duben
+Kveten
+Cerven
+Cervenec
+Srpen
+Zari
+Rijen
+Listopad
+Prosinec
+</pre>
+
+
+
+<p><a name="k10"></a></p>
+<h2 id="k10">10. Rozdělení prvků v&nbsp;sekvenci do dvou sekvencí funkcí <strong>partition</strong></h2>
+
+<p>Funkce <strong>filter</strong> popsaná v&nbsp;předchozím textu vybírá ze
+vstupní sekvence určité prvky na základě vyhodnocení jejich hodnoty (vůči
+libovolné podmínce). Ovšem někdy se dostaneme do situace, kdy je nutné prvky
+rozdělit do dvou skupin &ndash; prvky odpovídající podmínce a prvky, které
+podmínce neodpovídají. Toho lze samozřejmě dosáhnout i funkcí
+<strong>filter</strong> za předpokladu, že ji zavoláme poprvé s&nbsp;nějakou
+podmínkou a podruhé s&nbsp;negací podmínky, ovšem v&nbsp;knihovně <i>Lua
+Fun</i> je dostupná i funkce, která obě operace provede současně. Tato funkce
+se jmenuje <strong>partition</strong> a používá se následovně (připomíná funkci
+<strong>split</strong>):</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    each(print, sequence)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+&nbsp;
+<i>-- první podsekvence</i>
+print()
+print("take_n(10, sequence)")
+print("----------------------")
+t10 = take_n(10, g)
+printSequence(t10)
+&nbsp;
+&nbsp;
+<i>-- provést filtraci</i>
+f1, f2 = partition(<strong>function</strong>(x) return x % 2 == 0 end, g)
+print()
+print("even results")
+print("----------------------")
+t5 = take_n(5, f1)
+printSequence(t5)
+&nbsp;
+&nbsp;
+<i>-- (filtrace uz byla provedena)</i>
+print()
+print("odd results")
+print("----------------------")
+t5 = take_n(5, f2)
+printSequence(t5)
+</pre>
+
+<p>V&nbsp;příkladu je vstupní sekvence celých čísel rozdělena na čísla sudá a
+čísla lichá, takže by výsledek po spuštění příkladu měl vypadat takto:</p>
+
+<pre>
+take_n(10, sequence)
+----------------------
+1
+4
+9
+16
+25
+36
+49
+64
+81
+100
+&nbsp;
+even results
+----------------------
+4
+16
+36
+64
+100
+&nbsp;
+odd results
+----------------------
+1
+9
+25
+49
+81
+</pre>
+
+
+
+<p><a name="k11"></a></p>
+<h2 id="k11">11. Funkce vyššího řádu <strong>map</strong></h2>
+
+<p>Zatímco v&nbsp;běžných imperativních programovacích jazycích se seznamy
+zpracovávají prvek po prvku s&nbsp;využitím nějaké formy programové smyčky,
+v&nbsp;jazyku <i>Lua</i> se při použití knihovny <i>Fun</i> setkáme spíše
+s&nbsp;aplikací několika funkcí vyššího řádu, které jako svůj vstup akceptují
+sekvenci a nějakou funkci, která je postupně aplikována buď na prvky sekvence,
+nebo na prvek sekvence a akumulátor, jehož hodnota se postupně při zpracovávání
+jednotlivých prvků sekvence mění. Výsledkem bývá buď nová sekvence, nebo
+výsledná hodnota akumulátoru. Tyto funkce se většinou nazývají
+<strong>map</strong>, <strong>filter</strong> a <strong>reduce</strong> či
+<strong>foldl</strong>. Funkci <strong>filter</strong> již známe, takže se nyní
+podívejme na funkci <strong>map</strong>. Ta taktéž prochází prvky sekvence a
+aplikuje na ně nějakou funkci, podobně jako <strong>each</strong>, ovšem
+namísto využití vedlejšího efektu se na základě návratových hodnot funkce
+<strong>map</strong> vytváří nová sekvence prvků.</p>
+
+<p>Následuje příklad použití založený na rozhodování, zda je prvek sudý či
+nikoli. Druhá část demonstračního příkladu vypočte hodnoty faktoriálu pro
+prvních deset přirozených čísel:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    each(print, sequence)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- vlastní generátor</i>
+<strong>function</strong> my_generator(x)
+    return (x+1)*(x+1)
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat vlastní generátor</i>
+g = tabulate(my_generator)
+&nbsp;
+&nbsp;
+<i>-- první podsekvence</i>
+print()
+print("take_n(10, sequence)")
+print("----------------------")
+t10 = take_n(10, g)
+printSequence(t10)
+&nbsp;
+&nbsp;
+<i>-- provést transformaci</i>
+m1 = map(<strong>function</strong>(x) return x % 2 == 0 end, g)
+print()
+print("even results?")
+print("----------------------")
+t5 = take_n(5, m1)
+printSequence(t5)
+&nbsp;
+&nbsp;
+<i>-- funkce pro výpočet faktoriálu</i>
+<strong>function</strong> factorial(n)
+    <strong>for</strong> i = 1, n-1 <strong>do</strong>
+        n = n * i
+    <strong>end</strong>
+    return n
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- provést výpočet faktoriálu</i>
+m2 = map(factorial, range(10))
+print()
+print("factorials")
+print("----------------------")
+printSequence(m2)
+</pre>
+
+<p>Výsledky po spuštění:</p>
+
+<pre>
+take_n(10, sequence)
+----------------------
+1
+4
+9
+16
+25
+36
+49
+64
+81
+100
+&nbsp;
+even results?
+----------------------
+false
+true
+false
+true
+false
+&nbsp;
+factorials
+----------------------
+1
+2
+6
+24
+120
+720
+5040
+40320
+362880
+3628800
+</pre>
+
+
+
+<p><a name="k12"></a></p>
+<h2 id="k12">12. Opakování sekvence funkcí/generátorem <strong>cycle</strong></h2>
+
+<p>V&nbsp;některých situacích se setkáme s&nbsp;požadavkem na to, aby se prvky
+v&nbsp;sekvenci stále opakovaly dokola. Pochopitelně opět nemusíme pracně psát
+vlastní generátor nebo sofistikovanou programovou smyčku. Namísto toho můžeme
+použít funkci nazvanou <strong>cycle</strong>, která danou sekvenci (konečnou!)
+bude neustále dokola opakovat a vytvoří z&nbsp;ní tak sekvenci nekonečnou.
+V&nbsp;dalším demonstračním příkladu je ukázáno, jak se vytvoří sekvence sudých
+čísel v&nbsp;intervalu 2..10 a z&nbsp;ní následně sekvence, která se neustále
+opakuje:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků nekonečné sekvence</i>
+<strong>function</strong> printSequence(sequence, n)
+    i = 0
+    <strong>for</strong> index, value <strong>in</strong> iter(sequence) <strong>do</strong>
+        i = i + 1
+        <strong>if</strong> i &gt; n <strong>then</strong>
+            <strong>break</strong>
+        <strong>end</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g = range(2, 10, 2)
+&nbsp;
+&nbsp;
+print("original sequence")
+print("---------------------------")
+printSequence(g, 20)
+&nbsp;
+c = cycle(g)
+print()
+print("cycles of original sequence")
+print("---------------------------")
+printSequence(c, 20)
+</pre>
+
+<p>Výsledek tohoto příkladu nebude nijak překvapivý:</p>
+
+<pre>
+original sequence
+---------------------------
+2       2
+4       4
+6       6
+8       8
+10      10
+&nbsp;
+cycles of original sequence
+---------------------------
+2       2
+4       4
+6       6
+8       8
+10      10
+2       2
+4       4
+6       6
+8       8
+10      10
+2       2
+4       4
+6       6
+8       8
+10      10
+2       2
+4       4
+6       6
+8       8
+10      10
+</pre>
+
+<p>Další příklad používá funkce <strong>cycle</strong> a <strong>zip</strong>
+aby vznikla nová sekvence ukazující, která hodnota je sudá a která lichá:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků zazipované konečné sekvence</i>
+<strong>function</strong> printZippedSequence(sequence)
+    <strong>for</strong> index, a, b <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(index, a, b)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g = range(1, 20, 1)
+&nbsp;
+<i>-- opakující se sekvence dvou slov</i>
+c = cycle({"liché", "sudé"})
+&nbsp;
+<i>-- vytvoření zipu z obou sekvencí</i>
+z = zip(g, c)
+&nbsp;
+<i>-- s tiskem výsledku</i>
+printZippedSequence(z)
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+table: 0x5648aa99dd20   1       liché
+table: 0x5648aa99de30   2       sudé
+table: 0x5648aa99df40   3       liché
+table: 0x5648aa99e050   4       sudé
+table: 0x5648aa99e160   5       liché
+table: 0x5648aa99e270   6       sudé
+table: 0x5648aa97ccb0   7       liché
+table: 0x5648aa97cdc0   8       sudé
+table: 0x5648aa97ced0   9       liché
+table: 0x5648aa97cfe0   10      sudé
+table: 0x5648aa97d0f0   11      liché
+table: 0x5648aa97d200   12      sudé
+table: 0x5648aa97d310   13      liché
+table: 0x5648aa97d420   14      sudé
+table: 0x5648aa9a0a30   15      liché
+table: 0x5648aa9a0b40   16      sudé
+table: 0x5648aa9a0c50   17      liché
+table: 0x5648aa9a0d60   18      sudé
+table: 0x5648aa9a0e70   19      liché
+table: 0x5648aa9a0f80   20      sudé
+</pre>
+
+<p>A konečně příklad třetí přidává informaci o tom, které celé číslo je
+dělitelné třemi, opět na základě použití funkcí <strong>range</strong>,
+<strong>cycle</strong> a <strong>zip</strong> (bez použití programové
+smyčky):</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků zazipované konečné sekvence</i>
+<strong>function</strong> printZippedSequence(sequence)
+    <strong>for</strong> index, a, b, c <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(index, a, b, c)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g = range(1, 20, 1)
+&nbsp;
+<i>-- opakující se sekvence dvou slov</i>
+c1 = cycle({"liché", "sudé"})
+&nbsp;
+<i>-- opakující se sekvence tří slov</i>
+c2 = cycle({"", "", "a dělitelné třemi"})
+&nbsp;
+<i>-- vytvoření zipu z obou sekvencí</i>
+z = zip(g, c1, c2)
+&nbsp;
+<i>-- s tiskem výsledku</i>
+printZippedSequence(z)
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+table: 0x558981730950   1       liché   
+table: 0x558981720cc0   2       sudé    
+table: 0x558981720df0   3       liché   a dělitelné třemi
+table: 0x558981720f70   4       sudé    
+table: 0x5589817210a0   5       liché   
+table: 0x558981745030   6       sudé    a dělitelné třemi
+table: 0x558981745160   7       liché   
+table: 0x558981745290   8       sudé    
+table: 0x5589817453c0   9       liché   a dělitelné třemi
+table: 0x5589817497a0   10      sudé    
+table: 0x5589817498d0   11      liché   
+table: 0x558981749a00   12      sudé    a dělitelné třemi
+table: 0x558981749b30   13      liché   
+table: 0x558981749c60   14      sudé    
+table: 0x558981725940   15      liché   a dělitelné třemi
+table: 0x558981725a70   16      sudé    
+table: 0x558981725ba0   17      liché   
+table: 0x558981725cd0   18      sudé    a dělitelné třemi
+table: 0x558981725e00   19      liché   
+table: 0x558981725f30   20      sudé    
+</pre>
+
+
+
+<p><a name="k13"></a></p>
+<h2 id="k13">13. Kompozice sekvencí</h2>
+
+<p>Již víme, jak z&nbsp;několika sekvencí udělat sekvenci jedinou jejich
+&bdquo;zazipováním&ldquo;. Existuje však ještě jeden způsob, jak sekvence
+nějakým způsobem zkombinovat. Jedná se o operaci pojmenovanou
+<strong>chain</strong>, která vytvoří novou sekvenci spojením všech vstupních
+sekvencí do výsledné řady. Aby byla tato funkce prakticky použitelná je nutné,
+aby byly všechny sekvence konečné popř.&nbsp;aby byla nekonečná jen poslední
+vstupní sekvence. Opět se podívejme na jednoduchý příklad použití:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> index, value <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(index, value)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g1 = range(2, 10, 2)
+&nbsp;
+<i>-- další sekvence</i>
+g2 = range(10, 2, -2)
+&nbsp;
+<i>-- třetí sekvence</i>
+g3 = xrepeat("***")
+&nbsp;
+&nbsp;
+<i>-- spojení všech tří sekvencí</i>
+chained = chain(g1, g2, g3)
+&nbsp;
+<i>-- získání prvních dvaceti prvků z výsledné nekonečné sekvence</i>
+trimmed = take_n(20, chained)
+&nbsp;
+print()
+print("chained and trimmed sequence")
+print("----------------------------")
+printSequence(trimmed)
+&nbsp;
+<i>-- vše v jediném příkazu</i>
+trimmed2 = take_n(20, chain(range(2, 10, 2), range(10, 2, -2), xrepeat(100)))
+&nbsp;
+print()
+print("chained and trimmed sequence")
+print("----------------------------")
+printSequence(trimmed)
+</pre>
+
+<p>První dvě vstupní sekvence jsou konečné, jen třetí je nekonečná, takže
+spojení všech tří sekvencí dopadne podle očekávání:</p>
+
+<pre>
+chained and trimmed sequence
+----------------------------
+table: 0x559dbad78a60   2
+table: 0x559dbad78c40   4
+table: 0x559dbad68d60   6
+table: 0x559dbad68ee0   8
+table: 0x559dbad69060   10
+table: 0x559dbad69250   10
+table: 0x559dbad693a0   8
+table: 0x559dbad91020   6
+table: 0x559dbad91170   4
+table: 0x559dbad912c0   2
+table: 0x559dbad91480   ***
+table: 0x559dbad915d0   ***
+table: 0x559dbad91720   ***
+table: 0x559dbad91870   ***
+table: 0x559dbad919c0   ***
+table: 0x559dbad91b10   ***
+table: 0x559dbad91c60   ***
+table: 0x559dbad6e7b0   ***
+table: 0x559dbad6e900   ***
+table: 0x559dbad6ea50   ***
+&nbsp;
+chained and trimmed sequence
+----------------------------
+table: 0x559dbad6f680   2
+table: 0x559dbad93df0   4
+table: 0x559dbad93f40   6
+table: 0x559dbad94090   8
+table: 0x559dbad941e0   10
+table: 0x559dbad943a0   10
+table: 0x559dbad944f0   8
+table: 0x559dbad94640   6
+table: 0x559dbad94790   4
+table: 0x559dbad948e0   2
+table: 0x559dbad94aa0   ***
+table: 0x559dbad94bf0   ***
+table: 0x559dbad94d40   ***
+table: 0x559dbad94e90   ***
+table: 0x559dbad94fe0   ***
+table: 0x559dbad95130   ***
+table: 0x559dbad95280   ***
+table: 0x559dbad953d0   ***
+table: 0x559dbad95520   ***
+table: 0x559dbad95670   ***
+</pre>
+
+
+
+<p><a name="k14"></a></p>
+<h2 id="k14">14. Přidání indexů k&nbsp;prvkům s&nbsp;využitím funkce <strong>enumerate</strong></h2>
+
+<p>Funkce pojmenovaná <strong>enumerate</strong> může být užitečná v&nbsp;těch
+případech, kdy potřebujeme prvky v&nbsp;nějaké sekvenci očíslovat. Samozřejmě
+je možné <strong>enumerate</strong> nahradit nějakou kombinací funkcí
+<strong>range</strong> a <strong>zip</strong>, to je ovšem obtížnější
+v&nbsp;případě, že je vstupní sekvence nekonečná (funkce <strong>range</strong>
+se v&nbsp;knihovně <i>Lua Fun</i> chová jinak, než například
+v&nbsp;programovacím jazyce <i>Clojure</i>). Do kódu předchozího demonstračního
+příkladu jsme přidali funkci <strong>enumerate</strong> a rozšířili tak vstupní
+sekvenci o nový sloupec s&nbsp;pořadovým číslem prvku (opět se čísluje od
+jedničky, jak je to ostatně v&nbsp;jazyce <i>Lua</i> zvykem):</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> _, a, b <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(a, b)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g1 = range(2, 10, 2)
+&nbsp;
+<i>-- další sekvence</i>
+g2 = range(10, 2, -2)
+&nbsp;
+<i>-- třetí sekvence</i>
+g3 = xrepeat("***")
+&nbsp;
+&nbsp;
+<i>-- spojení všech tří sekvencí</i>
+chained = chain(g1, g2, g3)
+&nbsp;
+<i>-- získání prvních dvaceti prvků z výsledné nekonečné sekvence</i>
+trimmed = take_n(20, chained)
+enumerated = enumerate(trimmed)
+&nbsp;
+print()
+print("chained and trimmed sequence")
+print("----------------------------")
+printSequence(enumerated)
+&nbsp;
+<i>-- vše v jediném příkazu</i>
+trimmed2 = take_n(20, chain(range(2, 10, 2), range(10, 2, -2), xrepeat(100)))
+enumerated2 = enumerate(trimmed2)
+&nbsp;
+print()
+print("chained and trimmed sequence")
+print("----------------------------")
+printSequence(enumerated2)
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+chained and trimmed sequence
+----------------------------
+1       2
+2       4
+3       6
+4       8
+5       10
+6       10
+7       8
+8       6
+9       4
+10      2
+11      ***
+12      ***
+13      ***
+14      ***
+15      ***
+16      ***
+17      ***
+18      ***
+19      ***
+20      ***
+&nbsp;
+chained and trimmed sequence
+----------------------------
+1       2
+2       4
+3       6
+4       8
+5       10
+6       10
+7       8
+8       6
+9       4
+10      2
+11      100
+12      100
+13      100
+14      100
+15      100
+16      100
+17      100
+18      100
+19      100
+20      100
+</pre>
+
+
+
+<p><a name="k15"></a></p>
+<h2 id="k15">15. Proložení prvků v&nbsp;sekvenci konstantními hodnotami</h2>
+
+<p>Předposlední funkcí, s&nbsp;níž se setkáme, je funkce nazvaná
+<strong>intersperse</strong> (popravdě jsem toto slovo předtím neznal). Tato
+funkce slouží k&nbsp;vytvoření nové sekvence ze sekvence vstupní. Ovšem
+v&nbsp;nové sekvenci budou prvky proloženy nějakou další hodnotou, což
+v&nbsp;praxi znamená, že u konečných sekvencí vznikne nová sekvence
+s&nbsp;dvojnásobnou délkou:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- pomocná funkce pro tisk několika prvků konečné sekvence</i>
+<strong>function</strong> printSequence(sequence)
+    <strong>for</strong> _, x <strong>in</strong> iter(sequence) <strong>do</strong>
+        print(x)
+    <strong>end</strong>
+<strong>end</strong>
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g1 = range(1, 10, 1)
+&nbsp;
+g2 = intersperse("---------------------", g1)
+&nbsp;
+print()
+print("interspersed sequence")
+print("---------------------")
+printSequence(g2)
+</pre>
+
+<p>Výsledek:</p>
+
+<pre>
+interspersed sequence
+---------------------
+1
+---------------------
+2
+---------------------
+3
+---------------------
+4
+---------------------
+5
+---------------------
+6
+---------------------
+7
+---------------------
+8
+---------------------
+9
+---------------------
+10
+---------------------
+</pre>
+
+
+
+<p><a name="k16"></a></p>
+<h2 id="k16">16. Funkce vyššího řádu <strong>foldl</strong> neboli <strong>reduce</strong></h2>
+
+<p>Ve většině programovacích jazyků inspirovaných funkcionálním programováním
+se kromě funkcí typu <strong>map</strong> a <strong>filter</strong> setkáme i
+s&nbsp;funkcí vyššího řádu, která se nazývá buď <strong>reduce</strong> nebo
+<strong>fold</strong>. Knihovna <i>Lua Fun</i> pochopitelně není výjimkou,
+takže i v&nbsp;ní nalezneme tento typ funkce, a to dokonce s&nbsp;oběma jmény.
+Základní funkcí tohoto typu je funkce nazvaná <strong>foldl</strong>, která
+postupně zpracovává všechny prvky sekvence zleva doprava a aplikuje na každý
+prvek a akumulovanou hodnotu nějakou funkci (tedy <strong>foldl</strong> je
+funkcí vyššího řádu). Výsledkem je v&nbsp;každé iteraci nová hodnota
+akumulátoru a po projití celé vstupní sekvence je výsledná hodnota uložená
+v&nbsp;akumulátoru současně i návratovou hodnotou funkce
+<strong>foldl</strong>. Samotné volání této funkce je ovšem nepatrně
+složitější, než tomu bylo u <strong>map</strong> a <strong>filter</strong>. Je
+tomu tak z&nbsp;toho důvodu, že kromě zpracovávající funkce (se dvěma
+parametry) a vstupního seznamu musíme funkci <strong>foldl</strong> předat i
+počáteční hodnotu akumulátoru.</p>
+
+<p>Typickým příkladem použití je součet aritmetické řady. Zde je akumulátor
+inicializován na nulovou hodnotu:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<i>-- inicializovat generátor celých čísel</i>
+g1 = range(1, 10, 1)
+&nbsp;
+<i>-- spočítat součet všech prvků v sekvenci</i>
+sum = foldl(<strong>function</strong>(acc, x) <strong>return</strong> acc + x <strong>end</strong>, 0, g1)
+&nbsp;
+<i>-- a vypsat ho</i>
+print("1 + 2 + ... + 10 = ", sum)
+</pre>
+
+<p>S&nbsp;výsledkem:</p>
+
+<pre>
+1 + 2 + ... + 10 =      55
+</pre>
+
+<p>Dalším poměrně typickým příkladem použití je výpočet faktoriálu a to tak, že
+nejdříve vytvoříme aritmetickou řadu od 1 do n a posléze prvky této řady
+vynásobíme. Akumulátor musí být v&nbsp;tomto případě inicializován na jedničku
+(protože násobení nulou pochopitelně nedává žádané výsledky):</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<strong>for</strong> n = 1, 20 <strong>do</strong>
+    <i>-- inicializovat generátor celých čísel</i>
+    g1 = range(1, n)
+    prod = foldl(<strong>function</strong>(acc, x) <strong>return</strong> acc * x <strong>end</strong>, 1, g1)
+    print(n.."! = ", prod)
+<strong>end</strong>
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+1! =    1
+2! =    2
+3! =    6
+4! =    24
+5! =    120
+6! =    720
+7! =    5040
+8! =    40320
+9! =    362880
+10! =   3628800
+11! =   39916800
+12! =   479001600
+13! =   6227020800
+14! =   87178291200
+15! =   1307674368000
+16! =   20922789888000
+17! =   355687428096000
+18! =   6402373705728000
+19! =   121645100408832000
+20! =   2432902008176640000
+</pre>
+
+<p>Protože se s&nbsp;výpočtem sumy nebo produktu (násobení prvků řady) setkáme
+velmi často, existují v&nbsp;knihovně <i>Lua Fun</i> pomocné funkce
+<strong>sum</strong> a <strong>prod</strong>, které nahrazují volání
+<strong>foldl</strong>:</p>
+
+<pre>
+<i>-- načtení knihovny Lua Fun a současně import symbolů do globálního jmenného prostoru</i>
+<strong>require</strong> "fun"()
+&nbsp;
+&nbsp;
+<strong>for</strong> n = 1, 20 <strong>do</strong>
+    <i>-- inicializovat generátor celých čísel</i>
+    g1 = range(1, n)
+    prod = product(g1)
+    print(n.."! = ", prod)
+<strong>end</strong>
+&nbsp;
+<i>-- výpočet na jediném řádku</i>
+print()
+&nbsp;
+<strong>for</strong> n = 1, 20 <strong>do</strong>
+    <i>-- inicializovat generátor celých čísel</i>
+    print(n.."! = ", product(range(1, n)))
+<strong>end</strong>
+</pre>
+
+<p>Výsledky:</p>
+
+<pre>
+1! =    1
+2! =    2
+3! =    6
+4! =    24
+5! =    120
+6! =    720
+7! =    5040
+8! =    40320
+9! =    362880
+10! =   3628800
+11! =   39916800
+12! =   479001600
+13! =   6227020800
+14! =   87178291200
+15! =   1307674368000
+16! =   20922789888000
+17! =   355687428096000
+18! =   6402373705728000
+19! =   121645100408832000
+20! =   2432902008176640000
+&nbsp;
+1! =    1
+2! =    2
+3! =    6
+4! =    24
+5! =    120
+6! =    720
+7! =    5040
+8! =    40320
+9! =    362880
+10! =   3628800
+11! =   39916800
+12! =   479001600
+13! =   6227020800
+14! =   87178291200
+15! =   1307674368000
+16! =   20922789888000
+17! =   355687428096000
+18! =   6402373705728000
+19! =   121645100408832000
+20! =   2432902008176640000
+</pre>
+
+<p><div class="rs-tip-major">Poznámka: kromě toho existují i funkce nazvané
+<strong>max</strong> a <strong>min</strong> s&nbsp;podobným významem &ndash;
+postupná redukce vstupní sekvence s&nbsp;akumulací výsledku (zde vyhledání
+prvku s&nbsp;maximální resp.&nbsp;s&nbsp;minimální hodnotou).</div></p>
+
+
+
+<p><a name="k17"></a></p>
+<h2 id="k17">17. Přehled funkcí deklarovaných v&nbsp;knihovně <i>Lua Fun</i></h2>
+
+<p>V&nbsp;této kapitole bude uveden přehled většiny funkcí deklarovaných
+v&nbsp;knihovně <i>Lua Fun</i>. Funkce jsou rozděleny podle toho, jakou operaci
+provádí a pro jaké účely se hodí.</p>
+
+<p>Iterátory resp.&nbsp;funkce nahrazující klasické iterační smyčky:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>iter</td><td>vytvoření iterátoru z&nbsp;různých typů jazyka Lua (pole, mapa, řetězec)</td></tr>
+<tr><td>2</td><td>each</td><td>spuštění zvolené funkce pro každý prvek iterátoru</td></tr>
+<tr><td>3</td><td>for_each</td><td>jmenný alias pro předchozí funkci</td></tr>
+<tr><td>4</td><td>foreach</td><td>jmenný alias pro předchozí funkci</td></tr>
+</table>
+
+<p>Generátory:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>range</td><td>série číselných hodnot mezi zadanými mezemi s&nbsp;určitým krokem mezi hodnotami</td></tr>
+<tr><td>2</td><td>duplicate</td><td>sekvence jedné opakující se hodnoty</td></tr>
+<tr><td>3</td><td>xrepeat</td><td>alias pro předchozí generátor</td></tr>
+<tr><td>4</td><td>replicate</td><td>alias pro předchozí generátor</td></tr>
+<tr><td>5</td><td>tabulate</td><td>sekvence generovaná nějakou funkcí nebo uzávěrem</td></tr>
+<tr><td>6</td><td>zeros</td><td>série nulových hodnot</td></tr>
+<tr><td>7</td><td>ones</td><td>série jedniček</td></tr>
+<tr><td>8</td><td>rands</td><td>série pseudonáhodných hodnot</td></tr>
+</table>
+
+<p>Přístup k&nbsp;prvkům, řezy sekvencí (slicing) atd.:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>nth</td><td>získání n-tého prvku sekvence</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>2</td><td>head</td><td>získání prvního prvku v&nbsp;sekvenci</td></tr>
+<tr><td>3</td><td>car</td><td>jmenný alias pro předchozí funkci</td></tr>
+<tr><td>4</td><td>tail</td><td>sekvence bez prvního prvku</td></tr>
+<tr><td>5</td><td>cdr</td><td>jmenný alias pro předchozí funkci</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>6</td><td>take_n</td><td>získání prvních <i>n</i> prvků ze sekvence</td></tr>
+<tr><td>7</td><td>take_while</td><td>získání prvků ze začátku sekvence na základě zadané podmínky</td></tr>
+<tr><td>8</td><td>take</td><td>jmenný alias pro předchozí dvě funkce (v&nbsp;závislosti na typu prvního parametru)</td></tr>
+<tr><td>9</td><td>drop_n</td><td>přeskočení prvních <i>n</i> prvků ze sekvence</td></tr>
+<tr><td>10</td><td>drop_while</td><td>získání nové sekvence získané přeskočením prvků na začátku základě podmínky</td></tr>
+<tr><td>11</td><td>drop</td><td>jmenný alias pro předchozí dvě funkce (v&nbsp;závislosti na typu prvního parametru)</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>12</td><td>span</td><td>rozdělení sekvence na dvě části &ndash; jako kombinace <strong>take_n</strong>+<strong>drop_n</strong></td></tr>
+<tr><td>13</td><td>split</td><td>jmenný alias pro předchozí funkci</td></tr>
+<tr><td>14</td><td>split_at</td><td>jmenný alias pro předchozí funkci</td></tr>
+</table>
+
+<p>Filtrace (výběr) prvků na základě podmínky:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>filter</td><td>výběr prvků ze sekvence na základě kritérií testovaných predikátem</td></tr>
+<tr><td>2</td><td>remove_if</td><td>jmenný alias pro předchozí funkci</td></tr>
+<tr><td>3</td><td>grep</td><td>výběr prvků ze sekvence na základě kritérií testovaných vzorkem řetězce</td></tr>
+<tr><td>4</td><td>partition</td><td>kombinace funkce <strong>filter</strong> + <strong>filter</strong> s&nbsp;opačnou podmínkou</td></tr>
+</table>
+
+<p>Iterace nad všemi prvky sekvence:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>map</td><td>aplikace nějaké funkce na všechny prvky sekvence</td></tr>
+<tr><td>2</td><td>enumerate</td><td>vytvoření nové sekvence, v&nbsp;níž budou prvky očíslovány</td></tr>
+<tr><td>3</td><td>intersperse</td><td>proložení prvků v&nbsp;sekvenci zvolenou konstantní hodnotou</td></tr>
+</table>
+
+<p>Kompozice sekvencí:</p>
+
+<table>
+<tr><th>#</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td>1</td><td>zip</td><td>&bdquo;zazipování&ldquo; dvou nebo většího množství sekvencí do sekvence výsledné</td></tr>
+<tr><td>2</td><td>cycle</td><td>generátor sekvence, která neustále opakuje sekvenci vstupní</td></tr>
+<tr><td>3</td><td>chain</td><td>spojení dvou nebo většího množství sekvencí do sekvence výsledné</td></tr>
+</table>
+
+<p>Operátory používané ve funkcích vyššího řádu <strong>max</strong>,
+<strong>min</strong> apod.:</p>
+
+<table>
+<tr><th> #</th><th>Funkce</th><th>Stručný popis</th></tr>
+<tr><td> 1</td><td>operator.le</td><td>porovnání na relaci menší nebo rovno</td></tr>
+<tr><td> 2</td><td>operator.lt</td><td>porovnání na relaci menší než</td></tr>
+<tr><td> 3</td><td>operator.eq</td><td>porovnání na relaci rovnosti</td></tr>
+<tr><td> 4</td><td>operator.ne</td><td>porovnání na relaci nerovnosti</td></tr>
+<tr><td> 5</td><td>operator.ge</td><td>porovnání na relaci větší nebo rovno</td></tr>
+<tr><td> 6</td><td>operator.gt</td><td>porovnání na relaci větší než</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td> 7</td><td>operator.add</td><td>součet</td></tr>
+<tr><td> 8</td><td>operator.sub</td><td>rozdíl</td></tr>
+<tr><td> 9</td><td>operator.mul</td><td>součin</td></tr>
+<tr><td>10</td><td>operator.div</td><td>podíl (podle hodnot)</td></tr>
+<tr><td>11</td><td>operator.truediv</td><td>dělení reálných čísel</td></tr>
+<tr><td>12</td><td>operator.floordiv</td><td>dělení se zaokrouhlením</td></tr>
+<tr><td>13</td><td>operator.intdiv</td><td>celočíselné dělení</td></tr>
+<tr><td>14</td><td>operator.mod</td><td>zbytek po dělení (modulo)</td></tr>
+<tr><td>15</td><td>operator.neq</td><td>změna znaménka</td></tr>
+<tr><td>16</td><td>operator.pow</td><td>umocnění</td></tr>
+<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>17</td><td>operator.land</td><td>operace and</td></tr>
+<tr><td>18</td><td>operator.lor</td><td>operace or</td></tr>
+<tr><td>19</td><td>operator.lnot</td><td>operace not</td></tr>
+<tr><td>20</td><td>operator.truth</td><td>operace not not (převod na true/false)</td></tr>
+<tr><td>21</td><td>operator.concat</td><td>spojení řetězců</td></tr>
+<tr><td>22</td><td>operator.len</td><td>délka tabulky/řetězce</td></tr>
+<tr><td>23</td><td>operator.length</td><td>alias</td></tr>
+</table>
+
+
+
+<p><a name="k18"></a></p>
+<h2 id="k18">18. Repositář s&nbsp;demonstračními příklady</h2>
+
+<p>Zdrojové kódy všech dnes použitých demonstračních příkladů byly uloženy do
+nového Git repositáře, který je dostupný na adrese <a
+href="https://github.com/tisnik/functional-lua">https://github.com/tisnik/functional-lua</a>.
+V&nbsp;případě, že nebudete chtít klonovat celý repositář (ten je ovšem &ndash;
+alespoň prozatím &ndash; velmi malý, dnes má přibližně několik jednotek
+kilobajtů), můžete namísto toho použít odkazy na jednotlivé demonstrační
+příklady a jejich části, které naleznete v&nbsp;následující tabulce:</p>
+
+<table>
+<tr><th> #</th><th>Příklad</th><th>Stručný popis</th><th>Cesta</th></tr>
+<tr><td> 1</td><td>18_nth_infinite_sequence.lua</td><td>funkce <strong>nth</strong> aplikovaná na nekonečnou sekvenci</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/18_nth_infinite_sequence.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/18_nth_infinite_sequence.lua</a></td></tr>
+<tr><td> 2</td><td>19_nth_infinite_sequence_state.lua</td><td>zjištění interního chování funkce <strong>nth</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/19_nth_infinite_sequence_state.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/19_nth_infinite_sequence_state.lua</a></td></tr>
+<tr><td> 3</td><td>20_take_n_infinite_sequence.lua</td><td>zjištění interního chování funkce <strong>take_n</strong> pro nekonečné sekvence</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/20_take_n_infinite_sequence.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/20_take_n_infinite_sequence.lua</a></td></tr>
+<tr><td> 4</td><td>21_split_n_infinite_sequence.lua</td><td>zjištění interního chování funkce <strong>split_n</strong> pro nekonečné sekvence</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/21_split_n_infinite_sequence.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/21_split_n_infinite_sequence.lua</a></td></tr>
+<tr><td> 5</td><td>22_zip_infinite_sequences.lua</td><td>zazipování několika nekonečných sekvencí do nové sekvence</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/22_zip_infinite_sequences.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/22_zip_infinite_sequences.lua</a></td></tr>
+<tr><td> 6</td><td>23_zip_infinite_sequences_debug.lua</td><td>zjištění, kdy se vyhodnocují prvky nekonečné sekvence získané funkcí <strong>zip</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/23_zip_infinite_sequences_debug.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/23_zip_infinite_sequences_debug.lua</a></td></tr>
+<tr><td> 7</td><td>24_each.lua</td><td>zjednodušení programů s&nbsp;využitím funkce <strong>each</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/24_each.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/24_each.lua</a></td></tr>
+<tr><td> 8</td><td>25_filter.lua</td><td>výběr prvků do nové sekvence funkcí vyššího řádu <strong>filter</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/25_filter.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/25_filter.lua</a></td></tr>
+<tr><td> 9</td><td>26_grep.lua</td><td>výběr prvků na základě aplikace predikátu <strong>match</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/26_grep.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/26_grep.lua</a></td></tr>
+<tr><td>10</td><td>27_partition.lua</td><td>rozdělení prvků v&nbsp;sekvenci do dvou sekvencí funkcí <strong>partition</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/27_partition.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/27_partition.lua</a></td></tr>
+<tr><td>11</td><td>28_map.lua</td><td>použití funkce vyššího řádu <strong>map</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/28_map.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/28_map.lua</a></td></tr>
+<tr><td>12</td><td>29_cycle.lua</td><td>využití funkce <strong>cycle</strong> pro tvorbu opakujících se sekvencí</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/29_cycle.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/29_cycle.lua</a></td></tr>
+<tr><td>13</td><td>30_cycle.lua</td><td>využití funkce <strong>cycle</strong> pro tvorbu opakujících se sekvencí</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/30_cycle.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/30_cycle.lua</a></td></tr>
+<tr><td>14</td><td>31_cycle.lua</td><td>využití funkce <strong>cycle</strong> pro tvorbu opakujících se sekvencí</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/31_cycle.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/31_cycle.lua</a></td></tr>
+<tr><td>15</td><td>32_chain.lua</td><td>využití funkce <strong>chain</strong> pro spojení sekvencí do sekvence jediné</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/32_chain.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/32_chain.lua</a></td></tr>
+<tr><td>16</td><td>33_enumerate.lua</td><td>funkce <strong>enumerate</strong> pro očíslování prvků sekvence</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/33_enumerate.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/33_enumerate.lua</a></td></tr>
+<tr><td>17</td><td>34_interperse.lua</td><td>funkce <strong>intersperse</strong> pro proložení prvků sekvence jinými prvky</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/34_interperse.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/34_interperse.lua</a></td></tr>
+<tr><td>18</td><td>35_foldl.lua</td><td>klasická funkce vyššího řádu <strong>reduce</strong> neboli <strong>foldl</strong></td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/35_foldl.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/35_foldl.lua</a></td></tr>
+<tr><td>19</td><td>36_factorial.lua</td><td>výpočet faktoriálu pomocí <strong>reduce</strong>, explicitní zápis iterace</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/36_factorial.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/36_factorial.lua</a></td></tr>
+<tr><td>20</td><td>37_factorial.lua</td><td>výpočet faktoriálu pomocí <strong>reduce</strong>, implicitní zápis iterace</td><td><a href="https://github.com/tisnik/functional-lua/tree/master/lua_fun/37_factorial.lua">https://github.com/tisnik/functional-lua/tree/master/lua_fun/37_factorial.lua</a></td></tr>
+</table>
+
+
+
+<p><a name="k19"></a></p>
+<h2 id="k19">19. Články o programovacím jazyce Lua i o technologii LuaJITu</h2>
+
+<p>Programovacím jazykem Lua jsme se již na stránkách Rootu poměrně podrobně
+zabývali <a
+href="https://www.root.cz/serialy/programovaci-jazyk-lua/">v&nbsp;samostatném
+seriálu</a>. Jedná se o snadno naučitelný jazyk, který je ovšem (mj.&nbsp;i
+díky konceptu metatabulek) rozšiřitelný a poměrně tvárný. Viz též následující
+odkazy na již vydané články (včetně odkazu na e-book, jenž na základě těchto
+článků později vznikl):</p>
+
+<ol>
+
+<li>Programovací jazyk Lua <br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua/">https://www.root.cz/clanky/programovaci-jazyk-lua/</a>
+</li>
+
+<li>Základní konstrukce v programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/zakladni-konstrukce-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/zakladni-konstrukce-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Operátory a asociativní pole v&nbsp;jazyku Lua<br />
+<a href="https://www.root.cz/clanky/operatory-a-asociativni-pole-v-jazyku-lua/">https://www.root.cz/clanky/operatory-a-asociativni-pole-v-jazyku-lua/</a>
+</li>
+
+<li>Funkce v&nbsp;programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Funkce v&nbsp;programovacím jazyku Lua - uzávěry<br />
+<a href="https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua-uzavery/">https://www.root.cz/clanky/funkce-v-programovacim-jazyku-lua-uzavery/</a>
+</li>
+
+<li>Programovací jazyk Lua vestavěný do aplikací<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-vestaveny-do-aplikaci/">https://www.root.cz/clanky/programovaci-jazyk-lua-vestaveny-do-aplikaci/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;aplikacích II<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-aplikacich-ii/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-aplikacich-ii/</a>
+</li>
+
+<li>Objektově orientované programování v&nbsp;Lua<br />
+<a href="https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua/">https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua/</a>
+</li>
+
+<li>Objektově orientované programování v&nbsp;Lua II<br />
+<a href="https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua-ii/">https://www.root.cz/clanky/objektove-orientovane-programovani-v-lua-ii/</a>
+</li>
+
+<li>Programovací jazyk Lua a koprogramy<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-a-koprogramy/">https://www.root.cz/clanky/programovaci-jazyk-lua-a-koprogramy/</a>
+</li>
+
+<li>Knihovny a frameworky pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/knihovny-a-frameworky-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/knihovny-a-frameworky-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>Lua + LÖVE: vytvořte si vlastní hru<br />
+<a href="https://www.root.cz/clanky/lua-love-vytvorte-si-vlastni-hru/">https://www.root.cz/clanky/lua-love-vytvorte-si-vlastni-hru/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love/">https://www.root.cz/clanky/hratky-se-systemem-love/</a>
+</li>
+
+<li>Vytváříme hru v&nbsp;systému LÖVE<br />
+<a href="https://www.root.cz/clanky/vytvarime-hru-v-systemu-love/">https://www.root.cz/clanky/vytvarime-hru-v-systemu-love/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - částicové systémy<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-casticove-systemy/">https://www.root.cz/clanky/hratky-se-systemem-love-casticove-systemy/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE – kolize a odrazy těles<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-ndash-kolize-a-odrazy-teles/">https://www.root.cz/clanky/hratky-se-systemem-love-ndash-kolize-a-odrazy-teles/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - kolize a odrazy těles II<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-kolize-a-odrazy-teles-ii/">https://www.root.cz/clanky/hratky-se-systemem-love-kolize-a-odrazy-teles-ii/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - pružné vazby mezi tělesy<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-pruzne-vazby-mezi-telesy/">https://www.root.cz/clanky/hratky-se-systemem-love-pruzne-vazby-mezi-telesy/</a>
+</li>
+
+<li>Hrátky se systémem LÖVE - dokončení<br />
+<a href="https://www.root.cz/clanky/hratky-se-systemem-love-dokonceni/">https://www.root.cz/clanky/hratky-se-systemem-love-dokonceni/</a>
+</li>
+
+<li>LuaJ – implementace jazyka Lua v&nbsp;Javě<br />
+<a href="https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/">https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/</a>
+</li>
+
+<li>LuaJ a skriptování podle specifikace JSR-223<br />
+<a href="https://www.root.cz/clanky/luaj-a-skriptovani-podle-specifikace-jsr-223/">https://www.root.cz/clanky/luaj-a-skriptovani-podle-specifikace-jsr-223/</a>
+</li>
+
+<li>Metalua: programovatelné rozšíření sémantiky jazyka Lua<br />
+<a href="https://www.root.cz/clanky/metalua-programovatelne-rozsireni-semantiky-jazyka-lua/">https://www.root.cz/clanky/metalua-programovatelne-rozsireni-semantiky-jazyka-lua/</a>
+</li>
+
+<li>Metalua: užitečná rozšíření jazyka Lua<br />
+<a href="https://www.root.cz/clanky/metalua-uzitecna-rozsireni-jazyka-lua/">https://www.root.cz/clanky/metalua-uzitecna-rozsireni-jazyka-lua/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;roli skriptovacího jazyka pro WWW stránky<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/</a>
+</li>
+
+<li>Interpretry, překladače, JIT překladače a transpřekladače programovacího jazyka Lua<br />
+<a href="https://www.root.cz/clanky/interpretry-prekladace-jit-prekladace-a-transprekladace-programovaciho-jazyka-lua/">https://www.root.cz/clanky/interpretry-prekladace-jit-prekladace-a-transprekladace-programovaciho-jazyka-lua/</a>
+</li>
+
+<li>Kooperace mezi jazykem Lua a nativním (céčkovým) kódem<br />
+<a href="https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem/">https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem/</a>
+</li>
+
+<li>Kooperace mezi jazykem Lua a nativním (céčkovým) kódem: knihovna FFI<br />
+<a href="https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem-knihovna-ffi/">https://www.root.cz/clanky/kooperace-mezi-jazykem-lua-a-nativnim-ceckovym-kodem-knihovna-ffi/</a>
+</li>
+
+<li>Profilery pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/profilery-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/profilery-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>Využití knihovny debug v&nbsp;programovacím jazyku Lua<br />
+<a href="https://www.root.cz/clanky/vyuziti-knihovny-debug-v-programovacim-jazyku-lua/">https://www.root.cz/clanky/vyuziti-knihovny-debug-v-programovacim-jazyku-lua/</a>
+</li>
+
+<li>Programovací jazyk Lua (e-book)<br />
+<a href="https://www.knihydobrovsky.cz/e-kniha/programovaci-jazyk-lua-240253190">https://www.knihydobrovsky.cz/e-kniha/programovaci-jazyk-lua-240253190</a>
+</li>
+
+</ol>
+
+<p>Původně byla Lua realizována jako klasický interpret &ndash; prováděl se
+automatický a prakticky okamžitý překlad do bajtkódu, který byl následně
+interpretován. Později byl vytvořen i plnohodnotný (a nutno podotknout, že až
+neobvykle dobrý) just-in-time (JIT) překladač nazvaný LuaJIT. Touto zajímavou
+technologií jsme se zabývali v&nbsp;následující sérii článků (které jsou
+poněkud paradoxně součástí seriálu o <a
+href="https://www.root.cz/serialy/programovaci-jazyk-java-a-jvm/">programovacím
+jazyku Java a JVM</a>):</p>
+
+<ol>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (2)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-2/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-2/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (3)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-3/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-3/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (4)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-4/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-4/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (5 – tabulky a pole)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-5-tabulky-a-pole/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-5-tabulky-a-pole/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (6 – překlad programových smyček do mezijazyka LuaJITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-6-preklad-programovych-smycek-do-mezijazyka-luajitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-6-preklad-programovych-smycek-do-mezijazyka-luajitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (7 – dokončení popisu mezijazyka LuaJITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-7-dokonceni-popisu-mezijazyka-luajitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-7-dokonceni-popisu-mezijazyka-luajitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (8 – základní vlastnosti trasovacího JITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-8-zakladni-vlastnosti-trasovaciho-jitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-8-zakladni-vlastnosti-trasovaciho-jitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (9 – další vlastnosti trasovacího JITu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-9-dalsi-vlastnosti-trasovaciho-jitu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-9-dalsi-vlastnosti-trasovaciho-jitu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (10 – JIT překlad do nativního kódu)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-10-jit-preklad-do-nativniho-kodu/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-10-jit-preklad-do-nativniho-kodu/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (11 – JIT překlad do nativního kódu procesorů s architekturami x86 a ARM)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-11-jit-preklad-do-nativniho-kodu-procesoru-s-architekturami-x86-a-arm/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-11-jit-preklad-do-nativniho-kodu-procesoru-s-architekturami-x86-a-arm/</a>
+</li>
+
+<li>LuaJIT – Just in Time překladač pro programovací jazyk Lua (12 – překlad operací s reálnými čísly)<br />
+<a href="https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-12-preklad-operaci-s-realnymi-cisly/">https://www.root.cz/clanky/luajit-just-in-time-prekladac-pro-programovaci-jazyk-lua-12-preklad-operaci-s-realnymi-cisly/</a>
+</li>
+
+</ol>
+
+<p>A konečně nesmíme zapomenout na to, že kromě původní implementace
+interpretru a LuaJITu existuje celá řada dalších implementací tohoto
+programovacího jazyka. Některé z&nbsp;těchto implementací byly zmíněny
+v&nbsp;následujících článcích:</p>
+
+<ol>
+
+<li>Skriptovací jazyk Lua v&nbsp;aplikacích naprogramovaných v&nbsp;Go<br />
+<a href="https://www.root.cz/clanky/skriptovaci-jazyk-lua-v-aplikacich-naprogramovanych-v-go/">https://www.root.cz/clanky/skriptovaci-jazyk-lua-v-aplikacich-naprogramovanych-v-go/</a>
+</li>
+
+<li>Programovací jazyk Lua v&nbsp;roli skriptovacího jazyka pro WWW stránky<br />
+<a href="https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/">https://www.root.cz/clanky/programovaci-jazyk-lua-v-roli-skriptovaciho-jazyka-pro-www-stranky/</a>
+</li>
+
+<li>LuaJ – implementace jazyka Lua v&nbsp;Javě<br />
+<a href="https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/">https://www.root.cz/clanky/luaj-ndash-implementace-jazyka-lua-v-jave/</a>
+</li>
+
+<li>Tvorba pluginů pro Vim s&nbsp;využitím programovacího jazyka Lua<br />
+<a href="https://www.root.cz/clanky/tvorba-pluginu-pro-vim-s-vyuzitim-programovaciho-jazyka-lua/">https://www.root.cz/clanky/tvorba-pluginu-pro-vim-s-vyuzitim-programovaciho-jazyka-lua/</a>
+</li>
+
+</ol>
+
+<p><div class="rs-tip-major">Poznámka: předchozí články sice nepokrývají
+ekosystém tohoto jazyka dokonale, ovšem přibližně 90% všech relevantních
+informací je uvedeno. To je v&nbsp;případě dalších ekosystémů (Java, Python,
+Ruby, ...) prakticky nemožné, resp.&nbsp;to není v&nbsp;silách jediného autora
+:-)</div></p>
+
+
+
+<p><a name="k20"></a></p>
+<h2 id="k20">20. Odkazy na Internetu</h2>
+
+<ol>
+
+<li>Repositář projektu Lua Fun<br />
+<a href="https://github.com/luafun/luafun">https://github.com/luafun/luafun</a>
+</li>
+
+<li>Lua Functional 0.1.3 documentation<br />
+<a href="https://luafun.github.io/reference.html">https://luafun.github.io/reference.html</a>
+</li>
+
+<li>Getting Started<br />
+<a href="https://luafun.github.io/getting_started.html">https://luafun.github.io/getting_started.html</a>
+</li>
+
+<li>Rockspec knihovny Fun<br />
+<a href="https://raw.githubusercontent.com/luafun/luafun/master/fun-scm-1.rockspec">https://raw.githubusercontent.com/luafun/luafun/master/fun-scm-1.rockspec</a>
+</li>
+
+<li>Awesome Lua &ndash; A curated list of quality Lua packages and resources.<br />
+<a href="https://github.com/LewisJEllis/awesome-lua">https://github.com/LewisJEllis/awesome-lua</a>
+</li>
+
+<li>Repositář projektu Moses<br />
+<a href="https://github.com/Yonaba/Moses/">https://github.com/Yonaba/Moses/</a>
+</li>
+
+<li>Lambda the Ultimate: Coroutines in Lua<br />
+<a href="http://lambda-the-ultimate.org/no­de/438">http://lambda-the-ultimate.org/no­de/438</a>
+</li>
+
+<li>Coroutines Tutorial<br />
+<a href="http://lua-users.org/wiki/Co­routinesTutori­al">http://lua-users.org/wiki/Co­routinesTutori­al</a>
+</li>
+
+<li>Lua Coroutines Versus Python Generators<br />
+<a href="http://lua-users.org/wiki/Lu­aCoroutinesVer­susPythonGene­rators">http://lua-users.org/wiki/Lu­aCoroutinesVer­susPythonGene­rators</a>
+</li>
+
+<li>Programming in Lua 9.1 – Coroutine Basics<br />
+<a href="http://www.lu­a.org/pil/9.1­.html">http://www.lu­a.org/pil/9.1­.html</a>
+</li>
+
+<li>Wikipedia CZ: Koprogram<br />
+<a href="http://cs.wiki­pedia.org/wiki/Ko­program">http://cs.wiki­pedia.org/wiki/Ko­program</a>
+</li>
+
+<li>Wikipedia EN: Coroutine<br />
+<a href="http://en.wiki­pedia.org/wiki/Co­routine">http://en.wiki­pedia.org/wiki/Co­routine</a>
+</li>
+
+<li>Repositář knihovny Moses<br />
+<a href="https://github.com/Yonaba/Moses/">https://github.com/Yonaba/Moses/</a>
+</li>
+
+<li>Návod k&nbsp;použití knihovny Moses<br />
+<a href="https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md">https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md</a>
+</li>
+
+<li>How to understand clojure's lazy-seq<br />
+<a href="https://stackoverflow.com/questions/44095400/how-to-understand-clojures-lazy-seq">https://stackoverflow.com/questions/44095400/how-to-understand-clojures-lazy-seq</a>
+</li>
+
+<li>Lua Implementations<br />
+<a href="http://lua-users.org/wiki/LuaImplementations">http://lua-users.org/wiki/LuaImplementations</a>
+</li>
+
+<li>Generator (computer programming)<br />
+<a href="https://en.wikipedia.org/wiki/Generator_(computer_programming)">https://en.wikipedia.org/wiki/Generator_(computer_programming)</a>
+</li>
+
+<li>Lambda the Ultimate: Coroutines in Lua,<br />
+<a href="http://lambda-the-ultimate.org/node/438">http://lambda-the-ultimate.org/node/438</a>
+</li>
+
+<li>Coroutines Tutorial,<br />
+<a href="http://lua-users.org/wiki/CoroutinesTutorial">http://lua-users.org/wiki/CoroutinesTutorial</a>
+</li>
+
+<li>Lua Coroutines Versus Python Generators,<br />
+<a href="http://lua-users.org/wiki/LuaCorouti­nesVersusPythonGenerators">http://lua-users.org/wiki/LuaCorouti­nesVersusPythonGenerators</a>
+</li>
+
+<li>Category:Lua na Rosetta code<br />
+<a href="https://rosettacode.org/wiki/Category:Lua">https://rosettacode.org/wiki/Category:Lua</a>
+</li>
+
+<li>Programming in Lua: 23 – The Debug Library<br />
+<a href="http://www.lua.org/pil/23.html">http://www.lua.org/pil/23.html</a>
+</li>
+
+<li>Programming in Lua: 23.1 – Introspective Facilities<br />
+<a href="http://www.lua.org/pil/23.1.html">http://www.lua.org/pil/23.1.html</a>
+</li>
+
+<li>Programming in Lua: 23.2 – Hooks<br />
+<a href="http://www.lua.org/pil/23.2.html">http://www.lua.org/pil/23.2.html</a>
+</li>
+
+<li>Lua 5.2 Reference Manual: 6.10 – The Debug Library<br />
+<a href="http://www.lua.org/manual/5­.2/manual.html#6.10">http://www.lua.org/manual/5­.2/manual.html#6.10</a>
+</li>
+
+<li>Turtles all the way down<br />
+<a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">https://en.wikipedia.org/wiki/Turtles_all_the_way_down</a>
+</li>
+
+<li>Issues k&nbsp;projektu LuaFun<br />
+<a href="https://github.com/luafun/luafun/issues">https://github.com/luafun/luafun/issues</a>
+</li>
+
+<li>Archived | Embed Lua for scriptable apps<br />
+<a href="https://developer.ibm.com/tutorials/l-embed-lua/">https://developer.ibm.com/tutorials/l-embed-lua/</a>
+</li>
+
+<li>Embedding Lua<br />
+<a href="https://www.oreilly.com/library/view/lua-quick-start/9781789343229/3a6f3daf-f74c-4a25-a125-584da58568e4.xhtml">https://www.oreilly.com/library/view/lua-quick-start/9781789343229/3a6f3daf-f74c-4a25-a125-584da58568e4.xhtml</a>
+</li>
+
+</ol>
+
+
+
+<p></p><p></p>
+<p><small>Autor: <a href="http://www.fit.vutbr.cz/~tisnovpa">Pavel Tišnovský</a> &nbsp; 2020</small></p>
+</body>
+</html>
+
